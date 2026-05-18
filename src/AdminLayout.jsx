@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'; 
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 
-// 1. THE WIDE TEXT LOGOS (For the Sidebar)
-import ldiLogo from './assets/ldi-logo.png'; 
+// 1. THE WIDE TEXT LOGOS (For inside the Contractor Portal)
+import ldiLogo from './assets/ldi-logo.png';
 import gandivaLogo from './assets/gi-logo.png';
 
 // 2. THE SMALL SQUARE SYMBOLS (For the Browser Tab / Title Bar)
