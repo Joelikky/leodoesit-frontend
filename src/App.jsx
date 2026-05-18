@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from './ConfirmationModal'; 
 import imageCompression from 'browser-image-compression'; 
 // 1. THE WIDE TEXT LOGOS (For inside the Contractor Portal)
-import ldiLogo from './assets/LDI Logo.png';
-import gandivaLogo from './assets/GI Logo PNG.png';
+import ldiLogo from './assets/ldi-logo.png';
+import gandivaLogo from './assets/gi-logo.png';
 
 // 2. THE SMALL SQUARE SYMBOLS (For the Browser Tab / Title Bar)
-import ldiSymbol from './assets/LDI Symbol.png';
-import giSymbol from './assets/GI Symbol.png';
+import ldiSymbol from './assets/ldi-symbol.png';
+import giSymbol from './assets/gi-symbol.png';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
