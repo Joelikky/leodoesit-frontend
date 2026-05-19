@@ -107,12 +107,11 @@ export default function InvoiceLedger() {
       for (let i = 0; i < targets.length; i++) {
         let id = targets[i];
         let res; 
+        if (action === 'EMAIL') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/send`, 'POST');        
+        if (action === 'PAY') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/pay`, 'PUT', { payment_amount: paymentAmount ? parseFloat(paymentAmount) : null });
+        if (action === 'VOID') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/void`, 'PUT');
+        if (action === 'REMIND') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/remind`, 'POST');
         
-        if (action === 'EMAIL') res = await runApiAction(`http://localhost:5000/api/invoices/${id}/send`, 'POST');
-        if (action === 'PAY') res = await runApiAction(`http://localhost:5000/api/invoices/${id}/pay`, 'PUT', { payment_amount: paymentAmount ? parseFloat(paymentAmount) : null });
-        if (action === 'VOID') res = await runApiAction(`http://localhost:5000/api/invoices/${id}/void`, 'PUT'); 
-        if (action === 'REMIND') res = await runApiAction(`http://localhost:5000/api/invoices/${id}/remind`, 'POST');
-
         if (res && !res.success) {
            alert(`❌ Action Failed: ${res.error}`);
         } else if (res && res.success && (action === 'EMAIL' || action === 'REMIND')) {
@@ -142,8 +141,7 @@ export default function InvoiceLedger() {
 
   const downloadPDF = (e, invoice) => {
     e.stopPropagation(); 
-    window.open(`http://localhost:5000/api/invoices/${invoice.id}/download`, '_blank');
-  };
+    window.open(`${import.meta.env.VITE_API_URL}/api/invoices/${invoice.id}/download`, '_blank');  };
 
   // 🔥 1. THE MASTER FILTER PIPELINE
   const safeInvoices = Array.isArray(invoices) ? invoices : [];

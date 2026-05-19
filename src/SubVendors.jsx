@@ -27,8 +27,8 @@ export default function SubVendors() {
   const fetchSubVendors = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/sub_vendors', {
-        headers: { 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors`, {
+      headers: { 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
       if (data.success) setSubVendors(data.data);
@@ -43,8 +43,8 @@ export default function SubVendors() {
   const fetchInvoices = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/invoices', {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
+      headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
       if (data.success) setInvoices(data.data);
@@ -57,8 +57,8 @@ export default function SubVendors() {
     setSubVendors(subVendors.map(item => item.id === sv.id ? { ...item, status: newStatus } : item));
 
     try {
-      const response = await fetch(`http://localhost:5000/api/sub_vendors/${sv.id}`, {
-        method: 'PUT',
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors/${sv.id}`, {
+      method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...sv, status: newStatus })
       });
@@ -126,7 +126,7 @@ export default function SubVendors() {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
 
     try {
-      const response = await fetch('http://localhost:5000/api/sub_vendors', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, tenant_id: admin?.tenant_id })
@@ -151,7 +151,7 @@ export default function SubVendors() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/sub_vendors/${editingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editFormData)

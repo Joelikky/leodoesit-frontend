@@ -59,7 +59,7 @@ export default function Contractors() {
   const fetchContractors = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
@@ -70,7 +70,7 @@ export default function Contractors() {
   const fetchInvoices = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/invoices', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();

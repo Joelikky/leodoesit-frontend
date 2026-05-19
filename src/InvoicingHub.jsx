@@ -52,8 +52,8 @@ export default function InvoicingHub() {
         fetch(`${import.meta.env.VITE_API_URL}/api/timesheets?status=APPROVED`,  {
           headers: { 'x-tenant-id': admin.tenant_id } 
         }),
-        fetch('http://localhost:5000/api/clients', {
-          headers: { 'x-tenant-id': admin.tenant_id } 
+        fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
+        headers: { 'x-tenant-id': admin.tenant_id } 
         })
       ]);
       
@@ -88,8 +88,8 @@ export default function InvoicingHub() {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
 
     try {
-      const response = await fetch('http://localhost:5000/api/invoices', {
-        method: 'POST',
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
+                 method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           timesheet_id: timesheetId, 
@@ -118,8 +118,8 @@ export default function InvoicingHub() {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
 
     try {
-      const response = await fetch(`http://localhost:5000/api/timesheets/${timesheetId}/void`, {
-        method: 'PUT',
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${timesheetId}/void`, {
+      method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
           'x-tenant-id': admin?.tenant_id 

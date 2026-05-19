@@ -146,9 +146,9 @@ export default function AdminDashboard() {
     try {
       for (let id of targetArray) {
         if (action === 'APPROVE') {
-          await fetch(`http://localhost:5000/api/timesheets/${id}/approve`, { method: 'PUT' });
+          await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${id}/approve`, { method: 'PUT' });
         } else if (action === 'REJECT') {
-          await fetch(`http://localhost:5000/api/timesheets/${id}/reject`, {
+          await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${id}/reject`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ rejection_reason: reason })

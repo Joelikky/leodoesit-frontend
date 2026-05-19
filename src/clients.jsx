@@ -26,7 +26,7 @@ export default function Vendors() {
   const fetchClients = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/clients', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
@@ -42,7 +42,7 @@ export default function Vendors() {
   const fetchInvoices = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/invoices', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
@@ -56,7 +56,7 @@ export default function Vendors() {
     setClients(clients.map(item => item.id === client.id ? { ...item, is_active: newStatus } : item));
 
     try {
-      const response = await fetch(`http://localhost:5000/api/clients/${client.id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/clients/${client.id}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ export default function Vendors() {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
 
     try {
-      const response = await fetch('http://localhost:5000/api/clients', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ export default function Vendors() {
     setIsSubmitting(true);
     const admin = JSON.parse(localStorage.getItem('leodoesit_user')); // Added tenant fetch
     try {
-      const response = await fetch(`http://localhost:5000/api/clients/${editingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/clients/${editingId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
