@@ -49,7 +49,7 @@ export default function InvoicingHub() {
 
     try {
       const [tsResponse, clientsResponse] = await Promise.all([
-        fetch('http://localhost:5000/api/timesheets?status=APPROVED', {
+        fetch(`${import.meta.env.VITE_API_URL}/api/timesheets?status=APPROVED`,  {
           headers: { 'x-tenant-id': admin.tenant_id } 
         }),
         fetch('http://localhost:5000/api/clients', {

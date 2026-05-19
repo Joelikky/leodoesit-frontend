@@ -83,7 +83,7 @@ export default function AdminDashboard() {
     // 🔥 FIX: Grab the admin data to send the tenant ID for the security check!
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/timesheets', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets`, {
         headers: { 'x-tenant-id': admin?.tenant_id } // 🔥 This unlocks the queue!
       });
       const data = await response.json();
