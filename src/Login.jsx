@@ -23,12 +23,11 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, portal }) 
+        body: JSON.stringify({ email, password, portal })
       });
-
       const data = await response.json();
 
       if (data.success) {
