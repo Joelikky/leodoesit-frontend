@@ -196,7 +196,8 @@ export default function AdminDashboard() {
   }
 
   filteredList = filteredList.filter(ts => {
-    const searchString = `${ts.first_name} ${ts.last_name}`.toLowerCase();
+    // 🔥 Updated to search by Vendor name as well!
+    const searchString = `${ts.first_name} ${ts.last_name} ${ts.vendor_name || ''}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   });
 
@@ -266,7 +267,7 @@ export default function AdminDashboard() {
 
             <input 
               type="text" 
-              placeholder="🔍 Search name..." 
+              placeholder="🔍 Search name or client..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={styles.searchInput}
@@ -311,6 +312,9 @@ export default function AdminDashboard() {
                 <th style={styles.thSortable} onClick={() => handleSort('first_name')}>
                   Contractor {sortConfig.key === 'first_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
+                <th style={styles.thSortable} onClick={() => handleSort('vendor_name')}>
+                  Vendor {sortConfig.key === 'vendor_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
                 <th style={styles.thSortable} onClick={() => handleSort('period_start')}>Billing Period</th>
                 <th style={{...styles.thSortable, textAlign: 'center'}} onClick={() => handleSort('total_hours')}>
                   Hours {sortConfig.key === 'total_hours' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
@@ -334,7 +338,12 @@ export default function AdminDashboard() {
                     )}
                     <td style={styles.td}><strong>{ts.first_name} {ts.last_name}</strong></td>
                     <td style={styles.td}>
-                      {new Date(ts.period_start || Date.now()).toLocaleDateString()} - {new Date(ts.period_end || Date.now()).toLocaleDateString()}
+                        <span style={{ backgroundColor: '#F3F4F6', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                            {ts.vendor_name || 'Unassigned'}
+                        </span>
+                    </td>
+                    <td style={styles.td}>
+                      {new Date(ts.period_start || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                     </td>
                     <td style={styles.td}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
@@ -394,7 +403,7 @@ export default function AdminDashboard() {
             <div style={{ padding: '20px' }}>
               <h3 style={{ margin: '0 0 5px 0' }}>{drawerItem.first_name} {drawerItem.last_name}</h3>
               <p style={{ margin: 0, color: '#6B7280' }}>
-                {new Date(drawerItem.period_start).toLocaleDateString()} to {new Date(drawerItem.period_end).toLocaleDateString()}
+                {new Date(drawerItem.period_start).toLocaleDateString('en-US', { timeZone: 'UTC' })} to {new Date(drawerItem.period_end).toLocaleDateString('en-US', { timeZone: 'UTC' })}
               </p>
               
               <div style={{ backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', marginTop: '20px', textAlign: 'center' }}>
@@ -450,7 +459,7 @@ export default function AdminDashboard() {
                       <span style={{ fontWeight: 'bold', color: '#111827' }}>{ts.first_name} {ts.last_name}</span>
                       <br/>
                       <span style={{ color: '#6B7280', fontSize: '13px' }}>
-                        {new Date(ts.period_start).toLocaleDateString()} - {new Date(ts.period_end).toLocaleDateString()}
+                        {new Date(ts.period_start).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                       </span>
                     </div>
                     <div style={{ fontWeight: 'bold', color: '#111827' }}>
