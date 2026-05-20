@@ -577,10 +577,10 @@ export default function Contractors() {
               <div style={styles.formGrid}>
                 <input required type="text" name="first_name" placeholder="First Name *" value={formData.first_name} onChange={handleChange} style={styles.input} />
                 <input required type="text" name="last_name" placeholder="Last Name *" value={formData.last_name} onChange={handleChange} style={styles.input} />
-                <input required type="email" name="email" placeholder="Email Address *" value={formData.email} onChange={handleChange} style={styles.input} />
+                <input required type="email" name="email" placeholder="Email Address *" value={formData.email} onChange={handleChange} style={{ ...styles.input, gridColumn: 'span 2' }} />
                 <input required type="tel" name="phone_number" placeholder="Phone Number *" value={formData.phone_number} onChange={handleChange} style={styles.input} />
                 <input type="date" name="dob" title="Date of Birth" value={formData.dob} onChange={handleChange} style={styles.input} />
-                <select name="visa_status" value={formData.visa_status} onChange={handleChange} style={styles.input}>
+                <select name="visa_status" value={formData.visa_status} onChange={handleChange} style={{ ...styles.input, gridColumn: 'span 2' }}>
                   <option value="">-- Select Visa Status --</option>
                   <option value="US Citizen">US Citizen</option>
                   <option value="Green Card">Green Card (GC)</option>
@@ -589,7 +589,9 @@ export default function Contractors() {
                   <option value="CPT">CPT</option>
                   <option value="H4 EAD">H4 EAD</option>
                 </select>
-                <input type="text" name="address" placeholder="Full Address" value={formData.address} style={styles.fullWidthInput} onChange={handleChange} />
+                <div style={styles.fullWidthInput}>
+                  <input type="text" name="address" placeholder="Full Address" value={formData.address} onChange={handleChange} style={styles.input} />
+                </div>
               </div>
 
               <h3 style={styles.sectionHeader}>2. Work & Financial Details</h3>
@@ -616,14 +618,16 @@ export default function Contractors() {
                   <div style={{ backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', marginTop: '15px', borderLeft: '4px solid #4F46E5' }}>
                       <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>Corp-to-Corp (C2C) Information</h4>
                       <div style={styles.formGrid}>
-                          <select required name="c2c_name" value={formData.c2c_name || ''} onChange={(e) => handleSubVendorSelect(e, false)} style={styles.input}>
+                          <select required name="c2c_name" value={formData.c2c_name || ''} onChange={(e) => handleSubVendorSelect(e, false)} style={{ ...styles.input, gridColumn: 'span 2' }}>
                             <option value="">-- Select Sub Vendor --</option>
                             {subVendors.map(sv => (<option key={sv.id} value={sv.company_name}>{sv.company_name}</option>))}
                           </select>
                           <input required type="email" name="c2c_email" placeholder="C2C Email (Auto)" value={formData.c2c_email || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                           <input required type="tel" name="c2c_phone" placeholder="C2C Phone Number (Auto)" value={formData.c2c_phone || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
-                          <input type="text" name="c2c_net_terms" placeholder="C2C Net Terms (Auto)" value={formData.c2c_net_terms || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
-                          <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={formData.c2c_address || ''} readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          <input type="text" name="c2c_net_terms" placeholder="C2C Net Terms (Auto)" value={formData.c2c_net_terms || ''} readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          <div style={styles.fullWidthInput}>
+                            <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={formData.c2c_address || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          </div>
                       </div>
                   </div>
               )}
@@ -642,11 +646,11 @@ export default function Contractors() {
 
               <h3 style={styles.sectionHeader}>3. Vendor / Project Details</h3>
               <div style={styles.formGrid}>
-                <select name="vendor_name" value={formData.vendor_name} onChange={(e) => handleClientSelect(e, false)} style={styles.input}>
+                <select name="vendor_name" value={formData.vendor_name} onChange={(e) => handleClientSelect(e, false)} style={{ ...styles.input, gridColumn: 'span 2' }}>
                   <option value="">-- Select End Client --</option>
                   {clients.map(client => (<option key={client.id} value={client.company_name}>{client.company_name}</option>))}
                 </select>
-                <input type="email" name="vendor_email" value={formData.vendor_email} placeholder="Vendor Email (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                <input type="email" name="vendor_email" value={formData.vendor_email} placeholder="Vendor Email (Auto)" readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                 
                 <input type="text" name="vendor_for" value={formData.vendor_for} placeholder="Vendor For (e.g. End Client Name)" onChange={handleChange} style={styles.input} />
                 <input type="text" name="net_terms" value={formData.net_terms} placeholder="Net Terms (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
@@ -660,7 +664,9 @@ export default function Contractors() {
                     <input type="date" name="project_end_date" value={formData.project_end_date || ''} onChange={handleChange} style={styles.input} />
                 </div>
                 
-                <input type="text" name="vendor_address" value={formData.vendor_address} placeholder="Vendor Address (Auto)" readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                <div style={styles.fullWidthInput}>
+                  <input type="text" name="vendor_address" value={formData.vendor_address} placeholder="Vendor Address (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
@@ -691,10 +697,10 @@ export default function Contractors() {
               <div style={styles.formGrid}>
                 <input required type="text" name="first_name" placeholder="First Name *" value={editFormData.first_name || ''} onChange={handleEditChange} style={styles.input} />
                 <input required type="text" name="last_name" placeholder="Last Name *" value={editFormData.last_name || ''} onChange={handleEditChange} style={styles.input} />
-                <input required type="email" name="email" placeholder="Email Address *" value={editFormData.email || ''} onChange={handleEditChange} style={styles.input} />
+                <input required type="email" name="email" placeholder="Email Address *" value={editFormData.email || ''} onChange={handleEditChange} style={{ ...styles.input, gridColumn: 'span 2' }} />
                 <input required type="tel" name="phone_number" placeholder="Phone Number *" value={editFormData.phone_number || ''} onChange={handleEditChange} style={styles.input} />
                 <input type="date" name="dob" title="Date of Birth" value={editFormData.dob || ''} onChange={handleEditChange} style={styles.input} />
-                <select name="visa_status" value={editFormData.visa_status || ''} onChange={handleEditChange} style={styles.input}>
+                <select name="visa_status" value={editFormData.visa_status || ''} onChange={handleEditChange} style={{ ...styles.input, gridColumn: 'span 2' }}>
                   <option value="">-- Select Visa Status --</option>
                   <option value="US Citizen">US Citizen</option>
                   <option value="Green Card">Green Card (GC)</option>
@@ -703,7 +709,9 @@ export default function Contractors() {
                   <option value="CPT">CPT</option>
                   <option value="H4 EAD">H4 EAD</option>
                 </select>
-                <input type="text" name="address" placeholder="Full Address" value={editFormData.address || ''} style={styles.fullWidthInput} onChange={handleEditChange} />
+                <div style={styles.fullWidthInput}>
+                  <input type="text" name="address" placeholder="Full Address" value={editFormData.address || ''} onChange={handleEditChange} style={styles.input} />
+                </div>
               </div>
 
               <h3 style={styles.sectionHeader}>2. Work & Financial Details</h3>
@@ -732,14 +740,16 @@ export default function Contractors() {
                   <div style={{ backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', marginTop: '15px', borderLeft: '4px solid #4F46E5' }}>
                       <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>Corp-to-Corp (C2C) Information</h4>
                       <div style={styles.formGrid}>
-                          <select required name="c2c_name" value={editFormData.c2c_name || ''} onChange={(e) => handleSubVendorSelect(e, true)} style={styles.input}>
+                          <select required name="c2c_name" value={editFormData.c2c_name || ''} onChange={(e) => handleSubVendorSelect(e, true)} style={{ ...styles.input, gridColumn: 'span 2' }}>
                             <option value="">-- Select Sub Vendor --</option>
                             {subVendors.map(sv => (<option key={sv.id} value={sv.company_name}>{sv.company_name}</option>))}
                           </select>
                           <input required type="email" name="c2c_email" placeholder="C2C Email" value={editFormData.c2c_email || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                           <input required type="tel" name="c2c_phone" placeholder="C2C Phone Number (Auto)" value={editFormData.c2c_phone || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
-                          <input type="text" name="c2c_net_terms" placeholder="C2C Net Terms (Auto)" value={editFormData.c2c_net_terms || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
-                          <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={editFormData.c2c_address || ''} readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          <input type="text" name="c2c_net_terms" placeholder="C2C Net Terms (Auto)" value={editFormData.c2c_net_terms || ''} readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          <div style={styles.fullWidthInput}>
+                            <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={editFormData.c2c_address || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          </div>
                       </div>
                   </div>
               )}
@@ -758,11 +768,11 @@ export default function Contractors() {
 
               <h3 style={styles.sectionHeader}>3. Vendor / Project Details</h3>
               <div style={styles.formGrid}>
-                <select name="vendor_name" value={editFormData.vendor_name || ''} onChange={(e) => handleClientSelect(e, true)} style={styles.input}>
+                <select name="vendor_name" value={editFormData.vendor_name || ''} onChange={(e) => handleClientSelect(e, true)} style={{ ...styles.input, gridColumn: 'span 2' }}>
                   <option value="">-- Select End Client --</option>
                   {clients.map(client => (<option key={client.id} value={client.company_name}>{client.company_name}</option>))}
                 </select>
-                <input type="email" name="vendor_email" value={editFormData.vendor_email || ''} placeholder="Vendor Email (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                <input type="email" name="vendor_email" value={editFormData.vendor_email || ''} placeholder="Vendor Email (Auto)" readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                 
                 <input type="text" name="vendor_for" value={editFormData.vendor_for || ''} placeholder="Vendor For" onChange={handleEditChange} style={styles.input} />
                 <input type="text" name="net_terms" value={editFormData.net_terms || ''} placeholder="Net Terms (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
@@ -776,7 +786,9 @@ export default function Contractors() {
                     <input type="date" name="project_end_date" value={editFormData.project_end_date || ''} onChange={handleEditChange} style={styles.input} />
                 </div>
                 
-                <input type="text" name="vendor_address" value={editFormData.vendor_address || ''} placeholder="Vendor Address (Auto)" readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                <div style={styles.fullWidthInput}>
+                  <input type="text" name="vendor_address" value={editFormData.vendor_address || ''} placeholder="Vendor Address (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
@@ -1012,13 +1024,14 @@ const styles = {
   largeModalBox: { backgroundColor: 'white', padding: '25px', borderRadius: '16px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
   closeBtn: { background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#9CA3AF' },
   sectionHeader: { margin: '15px 0 10px 0', color: '#374151', fontSize: '15px', borderBottom: '2px solid #F3F4F6', paddingBottom: '4px', fontWeight: '700' },
-  formGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  formGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' },
   input: { padding: '10px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  fullWidthInput: { width: '100%', boxSizing: 'border-box' },
+  fullWidthInput: { gridColumn: '1 / -1', width: '100%', boxSizing: 'border-box' },
   rateWrapper: { display: 'flex', alignItems: 'center', border: '1px solid #D1D5DB', borderRadius: '6px', overflow: 'hidden', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' },
   currencySymbol: { padding: '10px 12px', backgroundColor: '#F3F4F6', color: '#4B5563', fontWeight: 'bold', borderRight: '1px solid #D1D5DB', fontSize: '13px', whiteSpace: 'nowrap' },
   rateInput: { flex: 1, padding: '10px', border: 'none', fontSize: '14px', outline: 'none', width: '100%' },
   statsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
+  subGrid2Col: { gridColumn: 'span 2', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
   statBox: { backgroundColor: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' },
   statLabel: { margin: 0, fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', fontWeight: 'bold' },
   statValue: { margin: '4px 0 0 0', fontSize: '20px', color: '#111827', fontWeight: '700' },
