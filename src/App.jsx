@@ -69,20 +69,16 @@ export default function Portal() {
     const currentUser = JSON.parse(userString);
     setUser(currentUser);
 
-    // 🔥 4. DYNAMIC BRANDING & BROWSER TAB LOGIC
+    // DYNAMIC BRANDING & BROWSER TAB LOGIC
     if (currentUser.tenant_name) {
       if (currentUser.tenant_name.toLowerCase() === 'gandiva') {
         setCompanyName('Gandiva Insights');
         setThemeColor('#4F46E5'); 
-        
-        // Changes Browser Tab (Title Bar)
         document.title = "Gandiva Portal"; 
         changeBrowserIcon(giSymbol);       
       } else {
         setCompanyName('Leodoes It');
         setThemeColor('#10B981'); 
-        
-        // Changes Browser Tab (Title Bar)
         document.title = "Leodoes IT Portal"; 
         changeBrowserIcon(ldiSymbol);         
       }
@@ -197,7 +193,6 @@ export default function Portal() {
     }
   };
 
-  // Password Submit Handler
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -235,11 +230,8 @@ export default function Portal() {
 
   const handleLogout = () => {
     localStorage.removeItem('leodoesit_user');
-    
-    // Reset browser tab to default when logging out
     document.title = "Portal Login";
     changeBrowserIcon('/vite.svg'); 
-    
     navigate('/');
   };
 
@@ -266,36 +258,35 @@ export default function Portal() {
       
       {/* --- TOP NAVIGATION --- */}
       <nav style={styles.nav}>
-        <div style={styles.navContent}>
+        <div className="responsive-header" style={styles.navContent}>
           
-          {/* 🔥 5. ENSURE THE PORTAL USES THE WIDE LOGO */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
             <div style={styles.logoBadge}>
               <img 
                 src={companyName.toLowerCase().includes('gandiva') ? gandivaLogo : ldiLogo} 
                 alt={`${companyName} Logo`} 
-                style={{ height: 'auto', maxHeight: '35px', objectFit: 'contain', display: 'block' }} 
+                style={{ height: 'auto', maxHeight: '30px', objectFit: 'contain', display: 'block' }} 
               />
             </div>
             <span style={{...styles.portalBadge, backgroundColor: themeColor}}>Contractor Portal</span>
           </div>
 
-          {/* Right Side: User Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '5px' }}>
             <span style={styles.userInfo}>{user.first_name} {user.last_name}</span>
             <button onClick={() => setIsPasswordModalOpen(true)} style={styles.changePassBtn}>
-              Change Password
+              Password
             </button>
             <button onClick={handleLogout} style={styles.logoutBtn}>Log Out</button>
           </div>
         </div>
       </nav>
 
-      <div style={styles.portalLayout}>
+      {/* --- CORE STRUCTURAL GRID CONTENT wrappers --- */}
+      <div className="dashboard-content" style={styles.portalLayout}>
         
-        {/* --- LEFT SIDEBAR --- */}
-        <div style={styles.sidebar}>
-          <h3 style={{ margin: '0 0 20px 0', color: '#111827' }}>Billing Filter</h3>
+        {/* --- LEFT SIDEBAR (Converted to standard layout utility) --- */}
+        <div className="billing-card" style={styles.sidebar}>
+          <h3 style={{ margin: '0 0 20px 0', color: '#111827', fontSize: '18px' }}>Billing Filter</h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
             <div style={styles.inputGroup}>
@@ -322,7 +313,7 @@ export default function Portal() {
           </div>
 
           <div style={styles.sidebarStatusBox}>
-            <div style={{ color: displayedTimesheets.length > 0 ? '#059669' : '#6B7280', fontWeight: 'bold', marginBottom: '15px' }}>
+            <div style={{ color: displayedTimesheets.length > 0 ? '#059669' : '#6B7280', fontWeight: 'bold', marginBottom: '15px', fontSize: '14px' }}>
               {displayedTimesheets.length} Timesheet(s) Found
             </div>
 
@@ -335,15 +326,15 @@ export default function Portal() {
           </div>
         </div>
 
-        {/* --- RIGHT MAIN CARD --- */}
-        <div style={styles.mainCard}>
+        {/* --- RIGHT MAIN CARD (Fluid Width Container Block) --- */}
+        <div className="billing-card" style={styles.mainCard}>
           
           {!isCreatingNew && displayedTimesheets.length > 0 ? (
             /* VIEW 1: MULTIPLE TIMESHEET DASHBOARD */
             <div style={styles.statusView}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
-                  <h1 style={{...styles.title, fontSize: '24px'}}>Your Submitted Timesheets</h1>
+                  <h1 style={{...styles.title, fontSize: '22px'}}>Your Submitted Timesheets</h1>
                   <p style={styles.subtitle}>Showing data for {MONTHS[viewMonth]} {viewYear}</p>
                 </div>
                 <button onClick={() => setIsCreatingNew(true)} style={{...styles.addBtn, backgroundColor: themeColor, width: 'auto', padding: '10px 20px', color: 'white'}}>
@@ -353,17 +344,17 @@ export default function Portal() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {displayedTimesheets.map((ts, idx) => (
-                  <div key={ts.id || idx} style={{ ...styles.statusBox, display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', padding: '20px' }}>
+                  <div key={ts.id || idx} style={{ ...styles.statusBox, display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left', padding: '15px', flexWrap: 'wrap', gap: '15px' }}>
                     <div>
-                      <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#111827', fontSize: '16px' }}>
+                      <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', color: '#111827', fontSize: '15px' }}>
                         {new Date(ts.period_start).toLocaleDateString()} &nbsp;→&nbsp; {new Date(ts.period_end).toLocaleDateString()}
                       </p>
-                      <p style={{ margin: 0, color: '#6B7280', fontSize: '14px' }}>
+                      <p style={{ margin: 0, color: '#6B7280', fontSize: '13px' }}>
                         <strong>{ts.total_hours}</strong> Hours Logged
                       </p>
                     </div>
                     <div>
-                      {ts.status === 'SUBMITTED' && <span style={styles.badgePending}>⏳ Pending Admin Review</span>}
+                      {ts.status === 'SUBMITTED' && <span style={styles.badgePending}>⏳ Pending Review</span>}
                       {ts.status === 'APPROVED' && <span style={styles.badgeApproved}>✅ Approved</span>}
                       {ts.status === 'REJECTED' && <span style={styles.badgeRejected}>❌ Rejected</span>}
                     </div>
@@ -374,11 +365,11 @@ export default function Portal() {
 
           ) : isCreatingNew || (displayedTimesheets.length > 0 && displayedTimesheets.some(ts => ts.status === 'REJECTED')) ? (
 
-            /* VIEW 2: THE SUBMISSION FORM (Now requires Dates) */
+            /* VIEW 2: THE SUBMISSION FORM */
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
-                  <h1 style={styles.title}>Submit Your Hours</h1>
+                  <h1 style={{...styles.title, fontSize: '22px'}}>Submit Your Hours</h1>
                   <p style={styles.subtitle}>Enter the exact dates you worked.</p>
                 </div>
                 <button onClick={() => setIsCreatingNew(false)} style={styles.cancelBtn}>Cancel</button>
@@ -386,12 +377,12 @@ export default function Portal() {
 
               <form onSubmit={handleOpenPopup} style={styles.form}>
                 
-                <div style={{ display: 'flex', gap: '20px' }}>
-                  <div style={{ ...styles.inputGroup, flex: 1 }}>
+                <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+                  <div style={{ ...styles.inputGroup, flex: '1 1 200px' }}>
                     <label style={styles.label}>Start Date</label>
                     <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} style={styles.input} required />
                   </div>
-                  <div style={{ ...styles.inputGroup, flex: 1 }}>
+                  <div style={{ ...styles.inputGroup, flex: '1 1 200px' }}>
                     <label style={styles.label}>End Date</label>
                     <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} style={styles.input} required />
                   </div>
@@ -405,15 +396,15 @@ export default function Portal() {
                 <div style={styles.inputGroup}>
                   <label style={styles.label}>Proof of Work (Screenshots or PDF max 5MB)</label>
                   <div style={styles.uploadArea}>
-                    <p style={{ margin: '0 0 10px 0', color: '#6B7280', fontSize: '14px' }}>Upload screenshots verifying your tracked time.</p>
-                    <input id="file-upload-input" type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} style={{ margin: '0 auto', display: 'block', padding: '10px' }} />
+                    <p style={{ margin: '0 0 10px 0', color: '#6B7280', fontSize: '13px' }}>Upload screenshots verifying your tracked time.</p>
+                    <input id="file-upload-input" type="file" multiple accept="image/*,application/pdf" onChange={handleFileChange} style={{ margin: '0 auto', display: 'block', padding: '10px', maxWidth: '100%' }} />
                     
-                    {isCompressing && <p style={{ color: '#D97706', fontWeight: 'bold' }}>⏳ Processing files...</p>}
+                    {isCompressing && <p style={{ color: '#D97706', fontWeight: 'bold', fontSize: '13px' }}>⏳ Processing files...</p>}
                     
                     {!isCompressing && uploadedFiles.length > 0 && (
                       <div style={styles.fileList}>
                         {uploadedFiles.map((file, i) => (
-                          <div key={i} style={styles.fileItem}>📎 {file.name} ({(file.size / 1024).toFixed(0)} KB)</div>
+                          <div key={i} style={styles.fileItem}>📎 {file.name.length > 20 ? file.name.slice(0,20)+'...' : file.name} ({(file.size / 1024).toFixed(0)} KB)</div>
                         ))}
                       </div>
                     )}
@@ -428,12 +419,12 @@ export default function Portal() {
             
           ) : (
             
-            /* VIEW 3: EMPTY STATE */
-            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <div style={{ fontSize: '48px', marginBottom: '10px' }}>📂</div>
-              <h2 style={{ color: '#111827', margin: '0 0 10px 0' }}>No Data Found</h2>
-              <p style={{ color: '#6B7280', margin: '0 0 20px 0' }}>You have not submitted any timesheets for {MONTHS[viewMonth]} {viewYear}.</p>
-              <button onClick={() => setIsCreatingNew(true)} style={{...styles.addBtn, backgroundColor: themeColor}}>
+            /* VIEW 3: EMPTY STATE (Perfect alignment wrapper fix) */
+            <div style={{ textAlign: 'center', padding: '40px 10px' }}>
+              <div style={{ fontSize: '44px', marginBottom: '10px' }}>📂</div>
+              <h2 style={{ color: '#111827', margin: '0 0 10px 0', fontSize: '20px' }}>No Data Found</h2>
+              <p style={{ color: '#6B7280', margin: '0 0 20px 0', fontSize: '14px' }}>You have not submitted any timesheets for {MONTHS[viewMonth]} {viewYear}.</p>
+              <button onClick={() => setIsCreatingNew(true)} style={{...styles.addBtn, backgroundColor: themeColor, color: 'white', maxWidth: '280px', margin: '0 auto'}}>
                 + Submit Your First Timesheet
               </button>
             </div>
@@ -447,7 +438,7 @@ export default function Portal() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>Change Password</h3>
+              <h3 style={{ margin: 0, color: '#111827', fontSize: '18px' }}>Change Password</h3>
               <button onClick={() => setIsPasswordModalOpen(false)} style={styles.closeBtn}>✕</button>
             </div>
             <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -475,7 +466,7 @@ export default function Portal() {
               </div>
 
               <div>
-                <label style={styles.label}>Confirm New Password</label>
+                <label style={styles.label}>Confirm Password</label>
                 <input 
                   type="password" 
                   required 
@@ -489,7 +480,7 @@ export default function Portal() {
                 <button type="submit" disabled={isSubmitting} style={{...styles.submitBtn, backgroundColor: themeColor, padding: '10px', width: 'auto', flex: 1}}>
                   {isSubmitting ? 'Updating...' : 'Update Password'}
                 </button>
-                <button type="button" onClick={() => setIsPasswordModalOpen(false)} style={styles.cancelBtn}>Cancel</button>
+                <button type="button" onClick={() => setIsPasswordModalOpen(false)} style={{...styles.cancelBtn, padding: '10px 15px'}}>Cancel</button>
               </div>
 
             </form>
@@ -509,61 +500,57 @@ export default function Portal() {
   );
 }
 
+// --- Dynamic Styles Matrix Definition ---
 const styles = {
-  container: { height: '100vh', width: '100vw', backgroundColor: '#F3F4F6', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0, padding: 0, boxSizing: 'border-box' },
-  nav: { backgroundColor: '#111827', padding: '15px 0' },
-  navContent: { maxWidth: '1000px', margin: '0 auto', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  container: { minHeight: '100vh', width: '100%', backgroundColor: '#F3F4F6', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', margin: 0, padding: 0, boxSizing: 'border-box' },
+  nav: { backgroundColor: '#111827', padding: '10px 0', width: '100%' },
+  navContent: { maxWidth: '1000px', margin: '0 auto', padding: '0 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' },
   
   logoBadge: { 
     backgroundColor: 'white', 
-    padding: '8px 12px', 
+    padding: '6px 10px', 
     borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifycontent: 'center'
   },
-  portalBadge: { color: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px' },
-  changePassBtn: { backgroundColor: 'transparent', color: '#D1D5DB', border: '1px solid #4B5563', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: '0.2s' },
+  portalBadge: { color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px', whiteSpace: 'nowrap' },
+  changePassBtn: { backgroundColor: 'transparent', color: '#D1D5DB', border: '1px solid #4B5563', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
+  userInfo: { color: '#D1D5DB', fontSize: '13px', fontWeight: '500' },
+  logoutBtn: { backgroundColor: 'transparent', color: '#9CA3AF', border: '1px solid #4B5563', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
   
-  userInfo: { color: '#D1D5DB', fontSize: '14px' },
-  logoutBtn: { backgroundColor: 'transparent', color: '#9CA3AF', border: '1px solid #4B5563', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' },
+  portalLayout: { flex: 1, width: '100%', maxWidth: '1000px', margin: '20px auto', padding: '0 15px 30px 15px', boxSizing: 'border-box' },
   
-  portalLayout: { flex: 1, width: '100%', maxWidth: '1000px', margin: '40px auto', padding: '0 20px 40px 20px', display: 'flex', gap: '30px', alignItems: 'flex-start', overflowY: 'auto' },
+  sidebar: { padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px -3px rgba(0, 0, 0, 0.05)', backgroundColor: 'white' },
+  mainCard: { padding: '25px', borderRadius: '16px', boxShadow: '0 4px 15px -3px rgba(0, 0, 0, 0.05)', backgroundColor: 'white' },
   
-  sidebar: { width: '280px', flexShrink: 0, backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' },
-  mainCard: { flex: 1, backgroundColor: 'white', padding: '40px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' },
+  sidebarStatusBox: { marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' },
   
-  sidebarStatusBox: { marginTop: '25px', paddingTop: '25px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' },
+  title: { margin: '0 0 5px 0', color: '#111827', fontSize: '24px', fontWeight: '700' },
+  subtitle: { margin: 0, color: '#6B7280', fontSize: '14px' },
   
-  title: { margin: '0 0 10px 0', color: '#111827', fontSize: '28px' },
-  subtitle: { margin: 0, color: '#6B7280', fontSize: '15px' },
-  rejectedBanner: { backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', padding: '15px', borderRadius: '8px', marginTop: '20px', fontSize: '14px' },
+  form: { display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', boxSizing: 'border-box' },
+  label: { fontSize: '12px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  input: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '14px', backgroundColor: '#F9FAFB', outline: 'none', width: '100%', boxSizing: 'border-box' },
+  uploadArea: { border: '2px dashed #D1D5DB', borderRadius: '8px', padding: '20px', textAlign: 'center', backgroundColor: '#F9FAFB' },
+  fileList: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' },
+  fileItem: { backgroundColor: '#E0E7FF', color: '#3730A3', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' },
+  submitBtn: { color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', width: '100%' },
   
-  form: { display: 'flex', flexDirection: 'column', gap: '25px', marginTop: '20px' },
-  inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
-  label: { fontSize: '13px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  input: { padding: '12px 16px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '15px', backgroundColor: '#F9FAFB', outline: 'none' },
-  uploadArea: { border: '2px dashed #D1D5DB', borderRadius: '8px', padding: '30px', textAlign: 'center', backgroundColor: '#F9FAFB' },
-  fileList: { marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' },
-  fileItem: { backgroundColor: '#E0E7FF', color: '#3730A3', padding: '6px 12px', borderRadius: '4px', fontSize: '13px', fontWeight: 'bold' },
-  submitBtn: { color: 'white', border: 'none', padding: '16px', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', width: '100%', transition: '0.2s' },
-  
-  addBtn: { border: 'none', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', width: '100%', transition: '0.2s' },
-  cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '8px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' },
+  addBtn: { border: 'none', padding: '12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', width: '100%', textAlign: 'center' },
+  cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '8px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' },
   
   statusView: { display: 'flex', flexDirection: 'column' },
-  statusHeader: { textAlign: 'center', marginBottom: '30px' },
-  statusBox: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '12px', textAlign: 'center' },
+  statusBox: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '12px', boxSizing: 'border-box' },
   
-  // Status Badges
-  badgePending: { backgroundColor: '#FEF3C7', color: '#D97706', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #FDE68A' },
-  badgeApproved: { backgroundColor: '#D1FAE5', color: '#059669', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #A7F3D0' },
-  badgeRejected: { backgroundColor: '#FEE2E2', color: '#DC2626', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #FECACA' },
+  badgePending: { backgroundColor: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #FDE68A', whiteSpace: 'nowrap' },
+  badgeApproved: { backgroundColor: '#D1FAE5', color: '#059669', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #A7F3D0', whiteSpace: 'nowrap' },
+  badgeRejected: { backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #FECACA', whiteSpace: 'nowrap' },
 
-  // Password Modal Styles
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  modalContent: { backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '400px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' },
-  modalInput: { width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', boxSizing: 'border-box', outline: 'none' },
-  closeBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9CA3AF' }
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' },
+  modalContent: { backgroundColor: 'white', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '380px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
+  modalInput: { width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', boxSizing: 'border-box', outline: 'none', fontSize: '14px' },
+  closeBtn: { background: 'none', border: 'none', fontSize: '18px', cursor: 'pointer', color: '#9CA3AF' }
 };
