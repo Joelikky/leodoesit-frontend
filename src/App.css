@@ -1,95 +1,131 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* ==========================================================================
+   1. GLOBAL SYSTEM ROOT ADJUSTMENTS
+   ========================================================================== */
+   html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden; /* Zero horizontal scrollbars allowed */
+    background-color: #F3F4F6;
+    box-sizing: border-box;
   }
-  to {
-    transform: rotate(360deg);
+  
+  #root {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0; /* Clear default crowding padding */
+    text-align: left; /* Shift text layout structure back to natural alignments */
+    box-sizing: border-box;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  
+  *, *:before, *:after {
+    box-sizing: inherit;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-}
-
-
-/* App.css */
-
-/* 1. Stripe Table Row Hover */
-.admin-table-row {
-  border-bottom: 1px solid #F3F4F6;
-  transition: background-color 0.2s ease;
-}
-.admin-table-row:hover {
-  background-color: #F9FAFB;
-}
-
-/* 2. Image Hover Scale */
-.proof-image-card {
-  transition: transform 0.2s ease-in-out;
-}
-.proof-image-card:hover {
-  transform: scale(1.05);
-  cursor: pointer;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-/* 1. Header Fix: Allows the logo and buttons to wrap nicely on mobile */
-.responsive-header {
-  display: flex;
-  flex-wrap: wrap; 
-  align-items: center;
-  justify-content: space-between;
-  gap: 15px; /* Adds space between items if they stack */
-}
-
-/* 2. Main Container Fix: Stacks cards vertically by default (for mobile) */
-.dashboard-content {
-  display: flex;
-  flex-direction: column; 
-  gap: 20px;
-  width: 100%;
-}
-
-/* 3. Desktop View: Switches the layout to side-by-side on screens wider than 768px (tablets/laptops) */
-@media (min-width: 768px) {
+  
+  /* ==========================================================================
+     2. DEFAULT CORE VITE SPECIFICATIONS (Preserved & Cleaned)
+     ========================================================================== */
+  .logo {
+    height: 6em;
+    padding: 1.5em;
+    will-change: filter;
+    transition: filter 300ms;
+  }
+  .logo:hover {
+    filter: drop-shadow(0 0 2em #646cffaa);
+  }
+  .logo.react:hover {
+    filter: drop-shadow(0 0 2em #61dafbaa);
+  }
+  
+  @keyframes logo-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  @media (prefers-reduced-motion: no-preference) {
+    a:nth-of-type(2) .logo {
+      animation: logo-spin infinite 20s linear;
+    }
+  }
+  
+  .card {
+    padding: 2em;
+  }
+  
+  .read-the-docs {
+    color: #888;
+  }
+  
+  /* ==========================================================================
+     3. CUSTOM SYSTEM UTILITIES & EFFECTS
+     ========================================================================== */
+  .admin-table-row {
+    border-bottom: 1px solid #F3F4F6;
+    transition: background-color 0.2s ease;
+  }
+  .admin-table-row:hover {
+    background-color: #F9FAFB;
+  }
+  
+  .proof-image-card {
+    transition: transform 0.2s ease-in-out;
+  }
+  .proof-image-card:hover {
+    transform: scale(1.05);
+    cursor: pointer;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* ==========================================================================
+     4. LAYOUT SYSTEM (No Layout Cuts / Perfectly Responsive)
+     ========================================================================== */
+  
+  /* Top Top Header Layout Utilities */
+  .responsive-header {
+    display: flex;
+    flex-wrap: wrap; 
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Main Page Content Body Structural Grid Wrappers */
   .dashboard-content {
-    flex-direction: row; 
-    align-items: flex-start;
+    display: flex;
+    flex-direction: column; /* Default fallback stacks cards smoothly on mobile ports */
+    gap: 20px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
-}
-
-/* 4. Card Fix: Ensures cards don't break off the screen */
-.billing-card {
-  width: 100%; /* Forces it to fill the mobile screen */
-  max-width: 400px; /* Stops it from getting too wide on a laptop */
-  box-sizing: border-box;
-}
+  
+  /* Laptop View Conversion Breaks */
+  @media (min-width: 768px) {
+    .dashboard-content {
+      flex-direction: row; /* Horizontal flow alignment switches on desk monitors */
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+  }
+  
+  /* Base Card Block System Wrapper Rules */
+  .billing-card {
+    width: 100%; /* Spans full screen flush to boundaries on phones */
+    max-width: 100%;
+    background-color: white;
+    border-radius: 12px;
+    box-sizing: border-box;
+  }
+  
+  /* Balanced Card Layout Scaling for Desktops */
+  @media (min-width: 768px) {
+    .billing-card {
+      /* Prevents side panels from running completely infinite on huge widescreen windows */
+      max-width: calc(100% - 10px);
+    }
+  }
