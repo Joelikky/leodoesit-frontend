@@ -62,3 +62,34 @@
   cursor: pointer;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
+/* 1. Header Fix: Allows the logo and buttons to wrap nicely on mobile */
+.responsive-header {
+  display: flex;
+  flex-wrap: wrap; 
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px; /* Adds space between items if they stack */
+}
+
+/* 2. Main Container Fix: Stacks cards vertically by default (for mobile) */
+.dashboard-content {
+  display: flex;
+  flex-direction: column; 
+  gap: 20px;
+  width: 100%;
+}
+
+/* 3. Desktop View: Switches the layout to side-by-side on screens wider than 768px (tablets/laptops) */
+@media (min-width: 768px) {
+  .dashboard-content {
+    flex-direction: row; 
+    align-items: flex-start;
+  }
+}
+
+/* 4. Card Fix: Ensures cards don't break off the screen */
+.billing-card {
+  width: 100%; /* Forces it to fill the mobile screen */
+  max-width: 400px; /* Stops it from getting too wide on a laptop */
+  box-sizing: border-box;
+}

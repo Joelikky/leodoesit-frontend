@@ -167,7 +167,6 @@ export default function InvoicingHub() {
     if (filterMonth !== 'ALL' || filterYear !== 'ALL') {
       const tsDate = ts.period_start ? new Date(ts.period_start) : null;
       if (tsDate) {
-        // 🔥 FIX: Now strictly uses local timezone rendering instead of UTC
         const tsMonth = String(tsDate.getMonth() + 1).padStart(2, '0');
         const tsYear = String(tsDate.getFullYear());
         
@@ -212,184 +211,192 @@ export default function InvoicingHub() {
   const targetTimesheet = modalConfig.isOpen ? timesheets.find(ts => ts.id === modalConfig.targetId) : null;
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div style={styles.header}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h1 style={styles.title}>Invoicing Hub</h1>
-            <p style={styles.subtitle}>Assign approved hours to clients and generate official invoices.</p>
-          </div>
+    <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
+      
+      {/* FIXED HEADER: Employs responsive-header class from your App.css */}
+      <div className="responsive-header" style={styles.header}>
+        <div>
+          <h1 style={styles.title}>Invoicing Hub</h1>
+          <p style={styles.subtitle}>Assign approved hours to clients and generate official invoices.</p>
+        </div>
+        
+        {/* Responsive controls wrapping wrapper */}
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} style={styles.searchInput}>
+            <option value="ALL">All Months</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+          </select>
           
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} style={styles.searchInput}>
-              <option value="ALL">All Months</option>
-              <option value="01">January</option>
-              <option value="02">February</option>
-              <option value="03">March</option>
-              <option value="04">April</option>
-              <option value="05">May</option>
-              <option value="06">June</option>
-              <option value="07">July</option>
-              <option value="08">August</option>
-              <option value="09">September</option>
-              <option value="10">October</option>
-              <option value="11">November</option>
-              <option value="12">December</option>
-            </select>
-            
-            <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={styles.searchInput}>
-              <option value="ALL">All Years</option>
-              {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
-            </select>
+          <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={styles.searchInput}>
+            <option value="ALL">All Years</option>
+            {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
+          </select>
 
-            <input 
-              type="text" 
-              placeholder="🔍 Search contractor..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{...styles.searchInput, width: '220px'}}
-            />
-          </div>
+          <input 
+            type="text" 
+            placeholder="🔍 Search contractor..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={styles.responsiveSearch}
+          />
         </div>
       </div>
 
-      <div style={styles.tableContainer}>
-        {loading ? (
-          <p style={{ padding: '20px' }}>Loading approved timesheets...</p>
-        ) : processedTimesheets.length === 0 ? (
-          <div style={styles.emptyState}>
-            <div style={styles.emptyStateIcon}>🎉</div>
-            <h3 style={{ margin: '10px 0 5px 0', color: '#111827' }}>You are all caught up!</h3>
-            <p style={{ color: '#6B7280', marginBottom: '20px' }}>There are no approved timesheets waiting to be invoiced for this period.</p>
-            <button onClick={() => navigate('/admin/queue')} style={styles.queueBtn}>
-              Check Approval Queue
-            </button>
-          </div>
-        ) : (
-          <>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.tableHead}>
-                  <th style={styles.thSortable} onClick={() => handleSort('first_name')}>
-                    Contractor {sortConfig.key === 'first_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                  <th style={styles.thSortable} onClick={() => handleSort('invoice_rate')}>
-                    Bill Rate {sortConfig.key === 'invoice_rate' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                  <th style={styles.thSortable} onClick={() => handleSort('total_hours')}>
-                    Hours {sortConfig.key === 'total_hours' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                  <th style={styles.thSortable} onClick={() => handleSort('projected_total')}>
-                    Projected Total {sortConfig.key === 'projected_total' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                  <th style={styles.th}>Client Map</th>
-                  <th style={styles.thSortable} onClick={() => handleSort('period_start')}>
-                    Period {sortConfig.key === 'period_start' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                  <th style={styles.th}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentItems.map((ts) => {
-                 const activeRate = parseFloat(ts.invoice_rate || ts.pay_rate || 0);
-                 const projectedTotal = parseFloat(ts.total_hours || 0) * activeRate;
-                 
-                 // Smart Mapping
-                 let matchingClient;
-                 if (manualMappings[ts.id]) {
-                    matchingClient = clients.find(c => c.id === parseInt(manualMappings[ts.id]));
-                 } else {
-                    matchingClient = clients.find(c => c.company_name.trim().toLowerCase() === (ts.vendor_name || '').trim().toLowerCase());
-                 }
-                 
-                 const isReady = !!matchingClient;
-
-                 // 🔥 FIX: Now rendering with the correct local timezone month and year
-                 const tsDate = ts.period_start ? new Date(ts.period_start) : null;
-                 const periodText = tsDate ? `${MONTHS[tsDate.getMonth()]} ${tsDate.getFullYear()}` : 'N/A';
-
-                  return (
-                    <tr key={ts.id} style={styles.tableRow}>
-                      <td style={styles.td}><strong>{ts.first_name} {ts.last_name}</strong></td>
-                      <td style={styles.td}>${activeRate.toFixed(2)}/hr</td> 
-                      <td style={styles.td}><strong>{ts.total_hours}</strong></td>
-                      
-                      <td style={styles.td}>
-                        <span style={styles.projectedBadge}>
-                          ${projectedTotal.toFixed(2)}
-                        </span>
-                      </td>
-                      
-                      <td style={styles.td}>
-                        {isReady ? (
-                          <div style={styles.lockedClientBadge}>
-                            ✅ {matchingClient.company_name}
-                          </div>
-                        ) : (
-                          <select 
-                              value={""}
-                              onChange={(e) => handleManualMap(ts.id, e.target.value)}
-                              style={{
-                                  ...styles.searchInput, 
-                                  padding: '6px 10px', 
-                                  backgroundColor: '#FEF2F2',
-                                  color: '#DC2626',
-                                  border: '1px solid #FECACA',
-                                  fontWeight: 'bold'
-                              }}
-                          >
-                              <option value="" disabled>⚠️ Unmapped: {ts.vendor_name || 'Unknown'}</option>
-                              {clients.map(c => (
-                                  <option key={c.id} value={c.id}>{c.company_name}</option>
-                              ))}
-                          </select>
-                        )}
-                      </td>
-
-                      <td style={styles.td}>
-                        <span style={{ color: '#4B5563', fontSize: '13px', fontWeight: 'bold' }}>
-                          {periodText}
-                        </span>
-                      </td>
-                      
-                      <td style={styles.td}>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            onClick={() => handleActionClick('GENERATE', ts.id, matchingClient?.id)}
-                            style={isReady ? styles.invoiceBtnReady : styles.invoiceBtnDisabled}
-                            disabled={!isReady}
-                          >
-                            Generate Invoice
-                          </button>
-                          <button 
-                            onClick={() => handleActionClick('VOID', ts.id)}
-                            style={styles.voidBtn}
-                          >
-                            Void
-                          </button>
-                        </div>
-                      </td>
+      {/* DASHBOARD GRID CONTENT CONTAINER */}
+      <div className="dashboard-content">
+        
+        {/* Wrapped table card to keep layout responsive inside billing-card wrapper */}
+        <div className="billing-card" style={styles.tableCardContainer}>
+          {loading ? (
+            <p style={{ padding: '20px' }}>Loading approved timesheets...</p>
+          ) : processedTimesheets.length === 0 ? (
+            <div style={styles.emptyState}>
+              <div style={styles.emptyStateIcon}>🎉</div>
+              <h3 style={{ margin: '10px 0 5px 0', color: '#111827' }}>You are all caught up!</h3>
+              <p style={{ color: '#6B7280', marginBottom: '20px' }}>There are no approved timesheets waiting to be invoiced for this period.</p>
+              <button onClick={() => navigate('/admin/queue')} style={styles.queueBtn}>
+                Check Approval Queue
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Added responsive overflow wrap wrapper */}
+              <div style={{ width: '100%', overflowX: 'auto' }}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.tableHead}>
+                      <th style={styles.thSortable} onClick={() => handleSort('first_name')}>
+                        Contractor {sortConfig.key === 'first_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th style={styles.thSortable} onClick={() => handleSort('invoice_rate')}>
+                        Bill Rate {sortConfig.key === 'invoice_rate' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th style={styles.thSortable} onClick={() => handleSort('total_hours')}>
+                        Hours {sortConfig.key === 'total_hours' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th style={styles.thSortable} onClick={() => handleSort('projected_total')}>
+                        Projected Total {sortConfig.key === 'projected_total' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th style={styles.th}>Client Map</th>
+                      <th style={styles.thSortable} onClick={() => handleSort('period_start')}>
+                        Period {sortConfig.key === 'period_start' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                      </th>
+                      <th style={styles.th}>Action</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody>
+                    {currentItems.map((ts) => {
+                     const activeRate = parseFloat(ts.invoice_rate || ts.pay_rate || 0);
+                     const projectedTotal = parseFloat(ts.total_hours || 0) * activeRate;
+                     
+                     let matchingClient;
+                     if (manualMappings[ts.id]) {
+                        matchingClient = clients.find(c => c.id === parseInt(manualMappings[ts.id]));
+                     } else {
+                        matchingClient = clients.find(c => c.company_name.trim().toLowerCase() === (ts.vendor_name || '').trim().toLowerCase());
+                     }
+                     
+                     const isReady = !!matchingClient;
+                     const tsDate = ts.period_start ? new Date(ts.period_start) : null;
+                     const periodText = tsDate ? `${MONTHS[tsDate.getMonth()]} ${tsDate.getFullYear()}` : 'N/A';
 
-            {totalPages > 1 && (
-              <div style={styles.pagination}>
-                <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} style={styles.pageBtn}>Previous</button>
-                <span style={styles.pageInfo}>Page {currentPage} of {totalPages}</span>
-                <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} style={styles.pageBtn}>Next</button>
+                      return (
+                        <tr key={ts.id} style={styles.tableRow}>
+                          <td style={styles.td}><strong>{ts.first_name} {ts.last_name}</strong></td>
+                          <td style={styles.td}>${activeRate.toFixed(2)}/hr</td> 
+                          <td style={styles.td}><strong>{ts.total_hours}</strong></td>
+                          
+                          <td style={styles.td}>
+                            <span style={styles.projectedBadge}>
+                              ${projectedTotal.toFixed(2)}
+                            </span>
+                          </td>
+                          
+                          <td style={styles.td}>
+                            {isReady ? (
+                              <div style={styles.lockedClientBadge}>
+                                ✅ {matchingClient.company_name}
+                              </div>
+                            ) : (
+                              <select 
+                                  value={""}
+                                  onChange={(e) => handleManualMap(ts.id, e.target.value)}
+                                  style={{
+                                      ...styles.searchInput, 
+                                      padding: '6px 10px', 
+                                      backgroundColor: '#FEF2F2',
+                                      color: '#DC2626',
+                                      border: '1px solid #FECACA',
+                                      fontWeight: 'bold'
+                                  }}
+                              >
+                                  <option value="" disabled>⚠️ Unmapped: {ts.vendor_name || 'Unknown'}</option>
+                                  {clients.map(c => (
+                                      <option key={c.id} value={c.id}>{c.company_name}</option>
+                                  ))}
+                              </select>
+                            )}
+                          </td>
+
+                          <td style={styles.td}>
+                            <span style={{ color: '#4B5563', fontSize: '13px', fontWeight: 'bold' }}>
+                              {periodText}
+                            </span>
+                          </td>
+                          
+                          <td style={styles.td}>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              <button 
+                                onClick={() => handleActionClick('GENERATE', ts.id, matchingClient?.id)}
+                                style={isReady ? styles.invoiceBtnReady : styles.invoiceBtnDisabled}
+                                disabled={!isReady}
+                              >
+                                Generate
+                              </button>
+                              <button 
+                                onClick={() => handleActionClick('VOID', ts.id)}
+                                style={styles.voidBtn}
+                              >
+                                Void
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            )}
-          </>
-        )}
+
+              {totalPages > 1 && (
+                <div style={styles.pagination}>
+                  <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} style={styles.pageBtn}>Previous</button>
+                  <span style={styles.pageInfo}>Page {currentPage} of {totalPages}</span>
+                  <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} style={styles.pageBtn}>Next</button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
       </div>
 
+      {/* OVERLAY MODAL */}
       {modalConfig.isOpen && targetTimesheet && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
-            <h3 style={{ marginTop: 0, fontSize: '20px', color: modalConfig.action === 'VOID' ? '#DC2626' : '#111827' }}>
+            <h3 style={{ marginTop: 0, fontSize: '20px', color: modalConfig.action === 'VOID' ? '#DC2626' : '#4F46E5' }}>
               {modalConfig.action === 'VOID' ? 'Void Timesheet' : 'Confirm Invoice Generation'}
             </h3>
             
@@ -453,29 +460,27 @@ const styles = {
   title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0' },
   subtitle: { color: '#6B7280', margin: 0 },
   searchInput: { padding: '10px 15px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none' },
-  tableContainer: { backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden', minHeight: '300px' },
-  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
+  responsiveSearch: { padding: '10px 15px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none', minWidth: '200px', flexGrow: 1 },
+  tableCardContainer: { backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden', minHeight: '300px', width: '100%', maxWidth: '100%' },
+  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '650px' },
   tableHead: { backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB' },
   th: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px' },
   thSortable: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px', cursor: 'pointer', userSelect: 'none' },
   tableRow: { borderBottom: '1px solid #E5E7EB' },
   td: { padding: '15px 20px', color: '#4B5563', fontSize: '15px' },
   projectedBadge: { backgroundColor: '#F0FDF4', color: '#166534', padding: '6px 12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', border: '1px solid #BBF7D0' },
-  
   lockedClientBadge: { backgroundColor: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-block' },
-  
-  invoiceBtnReady: { backgroundColor: '#4F46E5', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' },
-  invoiceBtnDisabled: { backgroundColor: '#E5E7EB', color: '#9CA3AF', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'not-allowed' },
-  voidBtn: { backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' },
+  invoiceBtnReady: { backgroundColor: '#4F46E5', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', fontSize: '13px' },
+  invoiceBtnDisabled: { backgroundColor: '#E5E7EB', color: '#9CA3AF', border: 'none', padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'not-allowed', fontSize: '13px' },
+  voidBtn: { backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', padding: '8px 14px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', fontSize: '13px' },
   pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', borderTop: '1px solid #E5E7EB', backgroundColor: '#F9FAFB' },
   pageBtn: { padding: '8px 16px', borderRadius: '6px', border: '1px solid #D1D5DB', backgroundColor: 'white', cursor: 'pointer', fontWeight: 'bold', color: '#374151' },
   pageInfo: { color: '#6B7280', fontSize: '14px' },
-  
   emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center' },
   emptyStateIcon: { fontSize: '48px', marginBottom: '10px' },
   queueBtn: { backgroundColor: '#10B981', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' },
+  modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '100%', maxWidth: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', boxSizing: 'border-box' },
   modalReceipt: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '15px' },
   receiptRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: '12px', marginBottom: '12px', borderBottom: '1px dashed #D1D5DB' },
   submitBtn: { color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
