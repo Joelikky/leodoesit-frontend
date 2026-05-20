@@ -9,7 +9,7 @@ export default function Contractors() {
   
   const [searchTerm, setSearchTerm] = useState('');
   
-  // 🔥 Checkbox Filter States
+  // Checkbox Filter States
   const [showFilters, setShowFilters] = useState(false);
   const [selectedContracts, setSelectedContracts] = useState([]);
   const [selectedVisas, setSelectedVisas] = useState([]);
@@ -29,7 +29,7 @@ export default function Contractors() {
   const [editingId, setEditingId] = useState(null);
   const [editFormData, setEditFormData] = useState({});
   
-  // 🔥 NEW: Password Reset States
+  // Password Reset States
   const [passwordModalUser, setPasswordModalUser] = useState(null);
   const [newPassword, setNewPassword] = useState('');
   
@@ -81,7 +81,7 @@ export default function Contractors() {
   const fetchClients = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/clients', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
@@ -92,7 +92,7 @@ export default function Contractors() {
   const fetchSubVendors = async () => {
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/sub_vendors', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors`, {
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
       const data = await response.json();
@@ -105,7 +105,7 @@ export default function Contractors() {
     if (!window.confirm(`Move ${name} to the Archive?`)) return;
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${id}`, { 
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, { 
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
@@ -134,7 +134,7 @@ export default function Contractors() {
     if (confirmText?.trim() !== "DELETE") return;
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${id}/permanent`, { 
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}/permanent`, { 
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
       });
@@ -214,7 +214,7 @@ export default function Contractors() {
     setIsSubmitting(true);
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
         method: 'POST', 
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
         body: JSON.stringify({ ...formData, tenant_id: admin?.tenant_id })
@@ -230,7 +230,7 @@ export default function Contractors() {
     setIsSubmitting(true);
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${editingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingId}`, {
         method: 'PUT', 
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
         body: JSON.stringify(editFormData)
@@ -243,13 +243,12 @@ export default function Contractors() {
     } catch (error) { alert("Network error."); } finally { setIsSubmitting(false); }
   };
 
-  // 🔥 NEW: Password Reset Handler
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
-      const response = await fetch(`http://localhost:5000/api/users/${passwordModalUser.id}/password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${passwordModalUser.id}/password`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
         body: JSON.stringify({ newPassword })
@@ -347,39 +346,37 @@ export default function Contractors() {
   const statVendors = clients.length;
 
   return (
-    <div style={{ backgroundColor: '#F3F4F6', minHeight: '100vh', padding: '30px', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
+    <div style={{ backgroundColor: '#F3F4F6', minHeight: '100vh', padding: '20px', fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box', width: '100%' }}>
       
-      {/* 1. Top Action Bar */}
-      <div style={styles.header}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <h1 style={styles.title}>{showArchive ? '📦 Archived Records' : 'Team Roster'}</h1>
-            <p style={styles.subtitle}>Manage your workforce, set billing rates, and view insights.</p>
-          </div>
-          
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <button onClick={() => setShowArchive(!showArchive)} style={styles.darkBtn}>
-              {showArchive ? '👥 Back to Roster' : '📦 View Archive'}
-            </button>
-            {!showArchive && (
-              <>
-                <button onClick={exportToCSV} style={styles.darkBtn}>⬇️ Export CSV</button>
-                
-                <button 
-                  onClick={() => setShowFilters(!showFilters)} 
-                  style={{...styles.darkBtn, backgroundColor: showFilters ? '#4F46E5' : 'white', color: showFilters ? 'white' : '#374151', border: '1px solid #D1D5DB'}}
-                >
-                  ⚙️ Advanced Filters {(selectedContracts.length + selectedVisas.length + selectedVendors.length) > 0 ? `(${(selectedContracts.length + selectedVisas.length + selectedVendors.length)})` : ''}
-                </button>
+      {/* 1. Top Action Bar: Custom class to bundle layout triggers */}
+      <div className="responsive-header" style={styles.header}>
+        <div>
+          <h1 style={styles.title}>{showArchive ? '📦 Archived Records' : 'Team Roster'}</h1>
+          <p style={styles.subtitle}>Manage your workforce, set billing rates, and view insights.</p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', width: 'auto' }}>
+          <button onClick={() => setShowArchive(!showArchive)} style={styles.darkBtn}>
+            {showArchive ? '👥 Back to Roster' : '📦 View Archive'}
+          </button>
+          {!showArchive && (
+            <>
+              <button onClick={exportToCSV} style={styles.darkBtn}>⬇️ Export CSV</button>
+              
+              <button 
+                onClick={() => setShowFilters(!showFilters)} 
+                style={{...styles.darkBtn, backgroundColor: showFilters ? '#4F46E5' : 'white', color: showFilters ? 'white' : '#374151', border: '1px solid #D1D5DB'}}
+              >
+                ⚙️ Filters {(selectedContracts.length + selectedVisas.length + selectedVendors.length) > 0 ? `(${(selectedContracts.length + selectedVisas.length + selectedVendors.length)})` : ''}
+              </button>
 
-                <div style={styles.searchWrapper}>
-                  <span style={{padding: '0 10px', color: '#9CA3AF'}}>🔍</span>
-                  <input type="text" placeholder="Search team..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.topSearchInput} />
-                </div>
-                <button onClick={handleOpenAddModal} style={styles.primaryBtn}>+ Add Employee</button>
-              </>
-            )}
-          </div>
+              <div style={styles.searchWrapper}>
+                <span style={{padding: '0 10px', color: '#9CA3AF'}}>🔍</span>
+                <input type="text" placeholder="Search team..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} style={styles.topSearchInput} />
+              </div>
+              <button onClick={handleOpenAddModal} style={styles.primaryBtn}>+ Add Employee</button>
+            </>
+          )}
         </div>
       </div>
 
@@ -426,10 +423,10 @@ export default function Contractors() {
             </div>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'flex-end', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', width: '100%' }}>
              <button 
                 onClick={() => { setSelectedContracts([]); setSelectedVisas([]); setSelectedVendors([]); }}
-                style={{ backgroundColor: '#F3F4F6', border: '1px solid #D1D5DB', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#4B5563' }}
+                style={{ backgroundColor: '#F3F4F6', border: '1px solid #D1D5DB', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#4B5563', width: '100%', marginTop: '10px' }}
              >
                Clear Filters
              </button>
@@ -437,34 +434,36 @@ export default function Contractors() {
         </div>
       )}
 
-      {/* 2. Vibrant KPI Cards */}
+      {/* 2. Vibrant KPI Cards wrapped with grid classes */}
       {!showArchive && (
-        <div style={styles.kpiGrid}>
-          <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)'}}>
-            <h3 style={styles.kpiTitle}>Total No of Employees</h3>
-            <p style={styles.kpiValue}>{String(statTotalEmployees).padStart(2, '0')}</p>
-            <span style={styles.kpiBgNum}>{String(statTotalEmployees).padStart(2, '0')}</span>
-          </div>
-          <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #0EA5E9, #0369A1)'}}>
-            <h3 style={styles.kpiTitle}>Total No of Vendors</h3>
-            <p style={styles.kpiValue}>{String(statVendors).padStart(2, '0')}</p>
-            <span style={styles.kpiBgNum}>{String(statVendors).padStart(2, '0')}</span>
-          </div>
-          <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #F59E0B, #B45309)'}}>
-            <h3 style={styles.kpiTitle}>W2 Employees</h3>
-            <p style={styles.kpiValue}>{String(statW2).padStart(2, '0')}</p>
-            <span style={styles.kpiBgNum}>{String(statW2).padStart(2, '0')}</span>
-          </div>
-          <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #10B981, #047857)'}}>
-            <h3 style={styles.kpiTitle}>C2C Contractors</h3>
-            <p style={styles.kpiValue}>{String(statC2C).padStart(2, '0')}</p>
-            <span style={styles.kpiBgNum}>{String(statC2C).padStart(2, '0')}</span>
+        <div className="dashboard-content" style={{ marginBottom: '30px' }}>
+          <div style={styles.kpiGrid}>
+            <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #8B5CF6, #6D28D9)'}}>
+              <h3 style={styles.kpiTitle}>Total No of Employees</h3>
+              <p style={styles.kpiValue}>{String(statTotalEmployees).padStart(2, '0')}</p>
+              <span style={styles.kpiBgNum}>{String(statTotalEmployees).padStart(2, '0')}</span>
+            </div>
+            <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #0EA5E9, #0369A1)'}}>
+              <h3 style={styles.kpiTitle}>Total No of Vendors</h3>
+              <p style={styles.kpiValue}>{String(statVendors).padStart(2, '0')}</p>
+              <span style={styles.kpiBgNum}>{String(statVendors).padStart(2, '0')}</span>
+            </div>
+            <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #F59E0B, #B45309)'}}>
+              <h3 style={styles.kpiTitle}>W2 Employees</h3>
+              <p style={styles.kpiValue}>{String(statW2).padStart(2, '0')}</p>
+              <span style={styles.kpiBgNum}>{String(statW2).padStart(2, '0')}</span>
+            </div>
+            <div style={{...styles.kpiCard, background: 'linear-gradient(135deg, #10B981, #047857)'}}>
+              <h3 style={styles.kpiTitle}>C2C Contractors</h3>
+              <p style={styles.kpiValue}>{String(statC2C).padStart(2, '0')}</p>
+              <span style={styles.kpiBgNum}>{String(statC2C).padStart(2, '0')}</span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 3. Main Modern Table */}
-      <div style={styles.tableContainer}>
+      {/* 3. Main Modern Table container using fluid wraps */}
+      <div className="billing-card" style={styles.tableCardContainer}>
         {loading ? (
           <p style={{ padding: '20px' }}>Loading team...</p>
         ) : processedContractors.length === 0 ? (
@@ -475,79 +474,80 @@ export default function Contractors() {
           </div>
         ) : (
           <>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.tableHeader}>
-                  <th style={{...styles.thSortable, width: '18%'}} onClick={() => handleSort('first_name')}>
-                    Name {sortConfig.key === 'first_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
-                  </th>
-                  <th style={{...styles.th, width: '25%'}}>Contact & Vendor</th>
-                  <th style={{...styles.thCentered, width: '20%'}}>Financials</th>
-                  <th style={{...styles.thCentered, width: '15%'}}>Role / Visa</th>
-                  <th style={{...styles.thCentered, width: '22%'}}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentItems.map((user) => {
-                  return (
-                    <tr key={user.id} style={styles.tableRow}>
-                      <td style={styles.tdData}>
-                        <div onClick={() => setViewingUser(user)} style={{...styles.nameLink, ...styles.truncate}} title={`${user.first_name} ${user.last_name}`}>
-                          {user.first_name} {user.last_name}
-                        </div>
-                      </td>
-                      
-                      <td style={styles.tdData}>
-                        <div style={{ color: '#4B5563', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                           <span>✉️</span>
-                           <span style={styles.truncate} title={user.email}>{user.email}</span>
-                        </div>
-                        <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                           <span>🏢</span> 
-                           <span style={{ fontWeight: '600', color: '#374151', ...styles.truncate }} title={user.vendor_name || 'N/A'}>{user.vendor_name || 'N/A'}</span>
-                        </div>
-                      </td>
-                      
-                      <td style={styles.tdCentered}>
-                        {/* 🔥 UPDATED: Dynamic Colors for Active vs Inactive */}
-                        <div style={{
-                          ...styles.financialBadge,
-                          backgroundColor: user.is_active !== false ? '#D1FAE5' : '#FEE2E2',
-                          color: user.is_active !== false ? '#065F46' : '#991B1B',
-                          border: user.is_active !== false ? 'none' : '1px solid #FECACA'
-                        }}>
-                          Pay: ${parseFloat(user.pay_rate || 0).toFixed(2)} | Bill: ${parseFloat(user.invoice_rate || 0).toFixed(2)}
-                        </div>
-                      </td>
-                      
-                      <td style={styles.tdCentered}>
-                        <div style={{...styles.truncate, fontWeight: 'bold', color: '#111827', fontSize: '13px'}} title={user.role || 'Unassigned'}>
-                            {user.role || 'Unassigned'}
-                        </div>
-                        <div style={{color: '#3B82F6', fontSize: '12px', fontWeight: '700', margin: '4px 0', ...styles.truncate}} title={`${user.contract_type || 'W2'} • ${user.visa_status || 'N/A'} • ${user.is_active !== false ? 'Active' : 'Inactive'}`}>
-                          {user.contract_type || 'W2'} • {user.visa_status || 'N/A'} • {user.is_active !== false ? 'Active' : 'Inactive'}
-                        </div>
-                      </td>
-                      
-                      <td style={styles.tdCentered}>
-                        <div style={styles.actionGroup}>
-                          <button onClick={() => openInsights(user)} style={styles.iconBtn}>📊 Stats</button>
-                          <button onClick={() => handleEditClick(user)} style={styles.iconBtn}>Edit</button>
-                          {showArchive ? (
-                            <button onClick={() => handleRestoreContractor(user.id, user.first_name)} style={styles.iconBtnSquare}>↩️</button>
-                          ) : (
-                            <button onClick={() => handleArchiveContractor(user.id, user.first_name)} style={styles.iconBtnSquare} title="Archive">📦</button>
-                          )}
-                          <button onClick={() => handlePermanentDelete(user.id, user.first_name)} style={{...styles.iconBtnSquare, backgroundColor: '#FEE2E2', borderColor: '#FCA5A5'}} title="Delete">🗑️</button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+            <div style={{ width: '100%', overflowX: 'auto' }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr style={styles.tableHeader}>
+                    <th style={{...styles.thSortable, width: '180px'}} onClick={() => handleSort('first_name')}>
+                      Name {sortConfig.key === 'first_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                    <th style={{...styles.th, width: '220px'}}>Contact & Vendor</th>
+                    <th style={{...styles.thCentered, width: '240px'}}>Financials</th>
+                    <th style={{...styles.thCentered, width: '160px'}}>Role / Visa</th>
+                    <th style={{...styles.thCentered, width: '200px'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentItems.map((user) => {
+                    return (
+                      <tr key={user.id} style={styles.tableRow}>
+                        <td style={styles.tdData}>
+                          <div onClick={() => setViewingUser(user)} style={{...styles.nameLink, ...styles.truncate}} title={`${user.first_name} ${user.last_name}`}>
+                            {user.first_name} {user.last_name}
+                          </div>
+                        </td>
+                        
+                        <td style={styles.tdData}>
+                          <div style={{ color: '#4B5563', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                             <span>✉️</span>
+                             <span style={styles.truncate} title={user.email}>{user.email}</span>
+                          </div>
+                          <div style={{ color: '#6B7280', fontSize: '12px', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                             <span>🏢</span> 
+                             <span style={{ fontWeight: '600', color: '#374151', ...styles.truncate }} title={user.vendor_name || 'N/A'}>{user.vendor_name || 'N/A'}</span>
+                          </div>
+                        </td>
+                        
+                        <td style={styles.tdCentered}>
+                          <div style={{
+                            ...styles.financialBadge,
+                            backgroundColor: user.is_active !== false ? '#D1FAE5' : '#FEE2E2',
+                            color: user.is_active !== false ? '#065F46' : '#991B1B',
+                            border: user.is_active !== false ? 'none' : '1px solid #FECACA'
+                          }}>
+                            Pay: ${parseFloat(user.pay_rate || 0).toFixed(2)} | Bill: ${parseFloat(user.invoice_rate || 0).toFixed(2)}
+                          </div>
+                        </td>
+                        
+                        <td style={styles.tdCentered}>
+                          <div style={{...styles.truncate, fontWeight: 'bold', color: '#111827', fontSize: '13px' }} title={user.role || 'Unassigned'}>
+                              {user.role || 'Unassigned'}
+                          </div>
+                          <div style={{color: '#3B82F6', fontSize: '12px', fontWeight: '700', margin: '4px 0', ...styles.truncate}} title={`${user.contract_type || 'W2'} • ${user.visa_status || 'N/A'} • ${user.is_active !== false ? 'Active' : 'Inactive'}`}>
+                            {user.contract_type || 'W2'} • {user.visa_status || 'N/A'}
+                          </div>
+                        </td>
+                        
+                        <td style={styles.tdCentered}>
+                          <div style={styles.actionGroup}>
+                            <button onClick={() => openInsights(user)} style={styles.iconBtn}>📊 Stats</button>
+                            <button onClick={() => handleEditClick(user)} style={styles.iconBtn}>Edit</button>
+                            {showArchive ? (
+                              <button onClick={() => handleRestoreContractor(user.id, user.first_name)} style={styles.iconBtnSquare}>↩️</button>
+                            ) : (
+                              <button onClick={() => handleArchiveContractor(user.id, user.first_name)} style={styles.iconBtnSquare} title="Archive">📦</button>
+                            )}
+                            <button onClick={() => handlePermanentDelete(user.id, user.first_name)} style={{...styles.iconBtnSquare, backgroundColor: '#FEE2E2', borderColor: '#FCA5A5'}} title="Delete">🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-            {/* Pagination */}
+            {/* Pagination Grid Row */}
             {totalPages > 1 && (
               <div style={styles.pagination}>
                 <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} style={styles.pageBtn}>Previous</button>
@@ -560,7 +560,7 @@ export default function Contractors() {
       </div>
 
       {/* ========================================= */}
-      {/* 4. MODALS */}
+      {/* 4. MODALS (Responsive Overlaid Blocks) */}
       {/* ========================================= */}
 
       {/* --- ADD EMPLOYEE MODAL --- */}
@@ -568,11 +568,11 @@ export default function Contractors() {
         <div style={styles.modalOverlay}>
           <div style={styles.largeModalBox}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E7EB', paddingBottom: '15px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#111827' }}>Create New Employee Record</h2>
+              <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>Create New Employee Record</h2>
               <button onClick={handleCloseAddModal} style={styles.closeBtn}>✕</button>
             </div>
             
-            <form onSubmit={handleAddContractor} style={{ overflowY: 'auto', maxHeight: '70vh', paddingRight: '10px' }}>
+            <form onSubmit={handleAddContractor} style={{ overflowY: 'auto', maxHeight: '70vh', paddingRight: '5px' }}>
               <h3 style={styles.sectionHeader}>1. Personal Info</h3>
               <div style={styles.formGrid}>
                 <input required type="text" name="first_name" placeholder="First Name *" value={formData.first_name} onChange={handleChange} style={styles.input} />
@@ -589,7 +589,7 @@ export default function Contractors() {
                   <option value="CPT">CPT</option>
                   <option value="H4 EAD">H4 EAD</option>
                 </select>
-                <input type="text" name="address" placeholder="Full Address" value={formData.address} style={{...styles.input, gridColumn: 'span 2'}} onChange={handleChange} />
+                <input type="text" name="address" placeholder="Full Address" value={formData.address} style={styles.fullWidthInput} onChange={handleChange} />
               </div>
 
               <h3 style={styles.sectionHeader}>2. Work & Financial Details</h3>
@@ -623,7 +623,7 @@ export default function Contractors() {
                           <input required type="email" name="c2c_email" placeholder="C2C Email (Auto)" value={formData.c2c_email || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                           <input required type="tel" name="c2c_phone" placeholder="C2C Phone Number (Auto)" value={formData.c2c_phone || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                           <input type="text" name="c2c_net_terms" placeholder="C2C Net Terms (Auto)" value={formData.c2c_net_terms || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
-                          <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={formData.c2c_address || ''} readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={formData.c2c_address || ''} readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                       </div>
                   </div>
               )}
@@ -660,7 +660,7 @@ export default function Contractors() {
                     <input type="date" name="project_end_date" value={formData.project_end_date || ''} onChange={handleChange} style={styles.input} />
                 </div>
                 
-                <input type="text" name="vendor_address" value={formData.vendor_address} placeholder="Vendor Address (Auto)" readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                <input type="text" name="vendor_address" value={formData.vendor_address} placeholder="Vendor Address (Auto)" readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
@@ -677,11 +677,11 @@ export default function Contractors() {
         <div style={styles.modalOverlay}>
           <div style={styles.largeModalBox}>
             <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #E5E7EB', paddingBottom: '15px', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#111827' }}>Edit Employee Record</h2>
+              <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>Edit Employee Record</h2>
               <button onClick={handleCloseEditModal} style={styles.closeBtn}>✕</button>
             </div>
             
-            <form onSubmit={handleSaveEdit} style={{ overflowY: 'auto', maxHeight: '70vh', paddingRight: '10px' }}>
+            <form onSubmit={handleSaveEdit} style={{ overflowY: 'auto', maxHeight: '70vh', paddingRight: '5px' }}>
               <div style={{ backgroundColor: '#F9FAFB', padding: '15px', borderRadius: '8px', border: '1px solid #E5E7EB', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <input type="checkbox" name="is_active" checked={editFormData.is_active !== false} onChange={handleEditChange} style={{ width: '18px', height: '18px' }} />
                 <label style={{ fontSize: '15px', color: '#111827', fontWeight: 'bold' }}>Employee is Active</label>
@@ -703,7 +703,7 @@ export default function Contractors() {
                   <option value="CPT">CPT</option>
                   <option value="H4 EAD">H4 EAD</option>
                 </select>
-                <input type="text" name="address" placeholder="Full Address" value={editFormData.address || ''} style={{...styles.input, gridColumn: 'span 2'}} onChange={handleEditChange} />
+                <input type="text" name="address" placeholder="Full Address" value={editFormData.address || ''} style={styles.fullWidthInput} onChange={handleEditChange} />
               </div>
 
               <h3 style={styles.sectionHeader}>2. Work & Financial Details</h3>
@@ -739,7 +739,7 @@ export default function Contractors() {
                           <input required type="email" name="c2c_email" placeholder="C2C Email" value={editFormData.c2c_email || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                           <input required type="tel" name="c2c_phone" placeholder="C2C Phone Number (Auto)" value={editFormData.c2c_phone || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                           <input type="text" name="c2c_net_terms" placeholder="C2C Net Terms (Auto)" value={editFormData.c2c_net_terms || ''} readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
-                          <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={editFormData.c2c_address || ''} readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                          <input type="text" name="c2c_address" placeholder="C2C Address (Auto)" value={editFormData.c2c_address || ''} readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                       </div>
                   </div>
               )}
@@ -776,7 +776,7 @@ export default function Contractors() {
                     <input type="date" name="project_end_date" value={editFormData.project_end_date || ''} onChange={handleEditChange} style={styles.input} />
                 </div>
                 
-                <input type="text" name="vendor_address" value={editFormData.vendor_address || ''} placeholder="Vendor Address (Auto)" readOnly style={{...styles.input, gridColumn: 'span 2', backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
+                <input type="text" name="vendor_address" value={editFormData.vendor_address || ''} placeholder="Vendor Address (Auto)" readOnly style={{...styles.fullWidthInput, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '30px' }}>
@@ -792,31 +792,31 @@ export default function Contractors() {
       {viewingUser && (
         <div style={styles.modalOverlay}>
           <div style={styles.largeModalBox}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #E5E7EB', position: 'relative' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#6366F1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 'bold' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #E5E7EB', position: 'relative', flexWrap: 'wrap' }}>
+              <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#6366F1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' }}>
                 {viewingUser.first_name[0]}{viewingUser.last_name[0]}
               </div>
               <div>
-                <h2 style={{ margin: 0, color: '#111827', fontSize: '24px' }}>{viewingUser.first_name} {viewingUser.last_name}</h2>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                   <span style={{ fontSize: '14px', color: '#4B5563', fontWeight: '600' }}>{viewingUser.role || 'Unassigned Role'}</span>
+                <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>{viewingUser.first_name} {viewingUser.last_name}</h2>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px', flexWrap: 'wrap' }}>
+                   <span style={{ fontSize: '13px', color: '#4B5563', fontWeight: '600' }}>{viewingUser.role || 'Unassigned Role'}</span>
                    <span style={{ color: '#D1D5DB' }}>•</span>
-                   <span style={{ fontSize: '12px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '12px', backgroundColor: viewingUser.is_active !== false ? '#D1FAE5' : '#FEE2E2', color: viewingUser.is_active !== false ? '#065F46' : '#991B1B' }}>
+                   <span style={{ fontSize: '11px', fontWeight: 'bold', padding: '2px 8px', borderRadius: '12px', backgroundColor: viewingUser.is_active !== false ? '#D1FAE5' : '#FEE2E2', color: viewingUser.is_active !== false ? '#065F46' : '#991B1B' }}>
                      {viewingUser.is_active !== false ? 'Active' : 'Inactive'}
                    </span>
                 </div>
               </div>
-              <button onClick={() => setViewingUser(null)} style={{...styles.closeBtn, position: 'absolute', top: '-10px', right: '-10px'}}>✕</button>
+              <button onClick={() => setViewingUser(null)} style={{...styles.closeBtn, position: 'absolute', top: '-5px', right: '-5px'}}>✕</button>
             </div>
             
-            <div style={{ overflowY: 'auto', maxHeight: '60vh', paddingRight: '10px' }}>
+            <div style={{ overflowY: 'auto', maxHeight: '55vh', paddingRight: '5px' }}>
               <h3 style={styles.sectionHeader}>Personal Information</h3>
               <div style={styles.formGrid}>
                 <ProfileWidget label="Email Address" value={viewingUser.email} icon="📧" />
                 <ProfileWidget label="Phone Number" value={viewingUser.phone_number} icon="📱" />
                 <ProfileWidget label="Date of Birth" value={viewingUser.dob} icon="🎂" />
                 <ProfileWidget label="Visa Status" value={viewingUser.visa_status} icon="🛂" highlightColor="#3B82F6" />
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={styles.fullWidthInput}>
                   <ProfileWidget label="Home Address" value={viewingUser.address} icon="📍" />
                 </div>
               </div>
@@ -862,15 +862,15 @@ export default function Contractors() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => openInsights(viewingUser)} style={styles.insightBtn}>📊 Financial Dashboard</button>
-                <button onClick={() => handleEditClick(viewingUser)} style={styles.editBtn}>✏️ Edit Employee</button>
-                <button onClick={() => setPasswordModalUser(viewingUser)} style={styles.passwordBtn}>🔑 Reset Password</button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #E5E7EB', flexWrap: 'wrap', gap: '15px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={() => openInsights(viewingUser)} style={styles.insightBtn}>📊 Stats</button>
+                <button onClick={() => handleEditClick(viewingUser)} style={styles.editBtn}>✏️ Edit</button>
+                <button onClick={() => setPasswordModalUser(viewingUser)} style={styles.passwordBtn}>🔑 Password</button>
               </div>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => handleArchiveContractor(viewingUser.id, viewingUser.first_name)} style={styles.archiveBtn}>📦 Archive</button>
-                <button onClick={() => setViewingUser(null)} style={{...styles.cancelBtn, backgroundColor: '#9CA3AF'}}>Close Profile</button>
+                <button onClick={() => setViewingUser(null)} style={{...styles.cancelBtn, backgroundColor: '#9CA3AF'}}>Close</button>
               </div>
             </div>
           </div>
@@ -882,10 +882,10 @@ export default function Contractors() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#111827' }}>Reset Password</h2>
+              <h2 style={{ margin: 0, color: '#111827', fontSize: '18px' }}>Reset Password</h2>
               <button onClick={() => setPasswordModalUser(null)} style={styles.closeBtn}>✕</button>
             </div>
-            <p style={{ color: '#4B5563', marginBottom: '20px' }}>
+            <p style={{ color: '#4B5563', marginBottom: '20px', fontSize: '14px' }}>
               Set a new password for <strong>{passwordModalUser.first_name} {passwordModalUser.last_name}</strong>.
             </p>
             <form onSubmit={handlePasswordReset}>
@@ -911,29 +911,29 @@ export default function Contractors() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-              <h2 style={{ margin: 0, color: '#111827' }}>Financial Insights</h2>
+              <h2 style={{ margin: 0, color: '#111827', fontSize: '18px' }}>Financial Insights</h2>
               <button onClick={() => setInsightUser(null)} style={styles.closeBtn}>✕</button>
             </div>
-            <h3 style={{ marginTop: 0, color: '#4F46E5' }}>{insightUser.first_name} {insightUser.last_name}</h3>
+            <h3 style={{ marginTop: 0, color: '#4F46E5', fontSize: '16px' }}>{insightUser.first_name} {insightUser.last_name}</h3>
             <div style={styles.statsGrid}>
               <div style={styles.statBox}>
-                <p style={styles.statLabel}>Total Billed to Clients</p>
+                <p style={styles.statLabel}>Total Billed</p>
                 <h3 style={styles.statValue}>${(insightUser.totalBilled || 0).toFixed(2)}</h3>
               </div>
               <div style={styles.statBox}>
-                <p style={styles.statLabel}>Total Collected (Paid)</p>
+                <p style={styles.statLabel}>Total Collected</p>
                 <h3 style={{...styles.statValue, color: '#10B981'}}>${(insightUser.totalPaid || 0).toFixed(2)}</h3>
               </div>
               <div style={styles.statBox}>
-                <p style={styles.statLabel}>Pending / Unpaid</p>
+                <p style={styles.statLabel}>Pending Amount</p>
                 <h3 style={{...styles.statValue, color: '#F59E0B'}}>${(insightUser.pendingAmount || 0).toFixed(2)}</h3>
               </div>
               <div style={styles.statBox}>
-                <p style={styles.statLabel}>Invoices Generated</p>
+                <p style={styles.statLabel}>Invoices</p>
                 <h3 style={styles.statValue}>{insightUser.invoiceCount || 0}</h3>
               </div>
             </div>
-            <button onClick={() => setInsightUser(null)} style={{...styles.primaryBtn, width: '100%', marginTop: '20px'}}>Close Dashboard</button>
+            <button onClick={() => setInsightUser(null)} style={{...styles.primaryBtn, width: '100%', marginTop: '20px', padding: '12px'}}>Close Dashboard</button>
           </div>
         </div>
       )}
@@ -944,89 +944,88 @@ export default function Contractors() {
 
 // --- Helper Components for Modals ---
 const ProfileWidget = ({ label, value, icon, highlightColor }) => (
-  <div style={{ backgroundColor: highlightColor ? `${highlightColor}15` : '#F9FAFB', border: `1px solid ${highlightColor ? `${highlightColor}40` : '#E5E7EB'}`, padding: '12px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-    <div style={{ fontSize: '20px' }}>{icon}</div>
-    <div>
-      <div style={{ fontSize: '11px', color: highlightColor || '#6B7280', fontWeight: 'bold', textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontSize: '15px', color: '#111827', fontWeight: '600', marginTop: '2px' }}>{value || '—'}</div>
+  <div style={{ backgroundColor: highlightColor ? `${highlightColor}11` : '#F9FAFB', border: `1px solid ${highlightColor ? `${highlightColor}33` : '#E5E7EB'}`, padding: '10px 14px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px', boxSizing: 'border-box', width: '100%' }}>
+    <div style={{ fontSize: '18px' }}>{icon}</div>
+    <div style={{ overflow: 'hidden' }}>
+      <div style={{ fontSize: '10px', color: highlightColor || '#6B7280', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{label}</div>
+      <div style={{ fontSize: '14px', color: '#111827', fontWeight: '600', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{value || '—'}</div>
     </div>
   </div>
 );
 
 const ComplianceBadge = ({ label, completed }) => (
-  <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: completed ? '#D1FAE5' : '#FEE2E2', color: completed ? '#065F46' : '#991B1B', fontSize: '13px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
+  <div style={{ padding: '6px 12px', borderRadius: '6px', backgroundColor: completed ? '#D1FAE5' : '#FEE2E2', color: completed ? '#065F46' : '#991B1B', fontSize: '12px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '6px' }}>
     {completed ? '✅' : '❌'} {label}
   </div>
 );
 
-// --- Styles Object ---
+// --- Responsive Styles Object ---
 const styles = {
   header: { marginBottom: '25px' },
-  title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0', fontWeight: '700' },
+  title: { fontSize: '26px', color: '#111827', margin: '0 0 5px 0', fontWeight: '700' },
   subtitle: { color: '#6B7280', margin: 0, fontSize: '14px' },
   
-  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' },
-  kpiCard: { position: 'relative', padding: '25px', borderRadius: '12px', color: 'white', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' },
-  kpiTitle: { fontSize: '14px', fontWeight: 'bold', margin: '0 0 10px 0', zIndex: 2, position: 'relative' },
-  kpiValue: { fontSize: '36px', fontWeight: '900', margin: 0, zIndex: 2, position: 'relative' },
-  kpiBgNum: { position: 'absolute', right: '5px', bottom: '-15px', fontSize: '90px', fontWeight: '900', opacity: 0.15, zIndex: 1, lineHeight: 1 },
+  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', width: '100%' },
+  kpiCard: { position: 'relative', padding: '20px', borderRadius: '12px', color: 'white', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
+  kpiTitle: { fontSize: '13px', fontWeight: 'bold', margin: '0 0 8px 0', zIndex: 2, position: 'relative' },
+  kpiValue: { fontSize: '32px', fontWeight: '900', margin: 0, zIndex: 2, position: 'relative' },
+  kpiBgNum: { position: 'absolute', right: '5px', bottom: '-15px', fontSize: '80px', fontWeight: '900', opacity: 0.12, zIndex: 1, lineHeight: 1 },
 
-  filterPanel: { backgroundColor: 'white', padding: '25px', borderRadius: '12px', border: '1px solid #E5E7EB', marginBottom: '25px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '30px', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' },
-  filterColumn: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  filterTitle: { margin: '0 0 5px 0', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' },
-  filterList: { maxHeight: '160px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '10px' },
-  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#374151', cursor: 'pointer', userSelect: 'none' },
+  filterPanel: { backgroundColor: 'white', padding: '20px', borderRadius: '12px', border: '1px solid #E5E7EB', marginBottom: '25px', display: 'flex', flexDirection: 'column', gap: '15px', boxShadow: '0 4px 12px -3px rgba(0, 0, 0, 0.05)' },
+  filterColumn: { display: 'flex', flexDirection: 'column', gap: '8px' },
+  filterTitle: { margin: '0 0 2px 0', fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 'bold' },
+  filterList: { maxHeight: '120px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' },
+  checkboxLabel: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#374151', cursor: 'pointer' },
 
-  darkBtn: { backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB', padding: '10px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', transition: 'all 0.2s' },
-  primaryBtn: { backgroundColor: '#4F46E5', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' },
-  topSelect: { padding: '10px 16px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: 'white', outline: 'none', fontSize: '13px', color: '#374151' },
-  searchWrapper: { display: 'flex', alignItems: 'center', backgroundColor: 'white', border: '1px solid #D1D5DB', borderRadius: '8px', overflow: 'hidden' },
-  topSearchInput: { padding: '10px 10px 10px 0', border: 'none', outline: 'none', width: '180px', fontSize: '13px' },
+  darkBtn: { backgroundColor: 'white', color: '#374151', border: '1px solid #D1D5DB', padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '13px', flexGrow: 1, textAlign: 'center' },
+  primaryBtn: { backgroundColor: '#4F46E5', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: '600', cursor: 'pointer', fontSize: '13px', flexGrow: 1, textAlign: 'center' },
+  searchWrapper: { display: 'flex', alignItems: 'center', backgroundColor: 'white', border: '1px solid #D1D5DB', borderRadius: '8px', overflow: 'hidden', flexGrow: 2 },
+  topSearchInput: { padding: '10px 10px 10px 0', border: 'none', outline: 'none', width: '100%', fontSize: '13px' },
   
-  tableContainer: { backgroundColor: 'white', borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)', overflowX: 'auto', overflowY: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left', tableLayout: 'fixed' },
+  tableCardContainer: { backgroundColor: 'white', borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)', width: '100%', boxSizing: 'border-box' },
+  table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
   
   tableHeader: { backgroundColor: '#ffffff', borderBottom: '1px solid #E5E7EB' },
-  th: { padding: '20px 15px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'capitalize', letterSpacing: '0.02em' },
-  thSortable: { padding: '20px 15px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'capitalize', cursor: 'pointer', userSelect: 'none' },
-  thCentered: { padding: '20px 15px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'capitalize', textAlign: 'center' },
+  th: { padding: '15px 12px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.02em' },
+  thSortable: { padding: '15px 12px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', cursor: 'pointer', userSelect: 'none' },
+  thCentered: { padding: '15px 12px', fontWeight: '600', fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', textAlign: 'center' },
   
-  tableRow: { borderBottom: '1px solid #F3F4F6', transition: 'background-color 0.2s' },
-  tdData: { padding: '16px 15px', verticalAlign: 'middle' },
-  tdCentered: { padding: '16px 15px', verticalAlign: 'middle', textAlign: 'center' },
+  tableRow: { borderBottom: '1px solid #F3F4F6' },
+  tdData: { padding: '14px 12px', verticalAlign: 'middle' },
+  tdCentered: { padding: '14px 12px', verticalAlign: 'middle', textAlign: 'center' },
   
-  nameLink: { fontWeight: '700', color: '#4F46E5', fontSize: '14px', cursor: 'pointer', textDecoration: 'none' },
-  financialBadge: { padding: '6px 16px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', display: 'inline-block' },
-  docBadge: { backgroundColor: '#FEF3C7', color: '#B45309', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '800', display: 'inline-block', marginTop: '4px' },
+  nameLink: { fontWeight: '700', color: '#4F46E5', fontSize: '14px', cursor: 'pointer' },
+  financialBadge: { padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', display: 'inline-block', whiteSpace: 'nowrap' },
   
-  truncate: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' },
+  truncate: { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
 
-  actionGroup: { display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center', minWidth: '190px' },
-  iconBtn: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', color: '#374151', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
-  iconBtnSquare: { backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' },
+  actionGroup: { display: 'flex', gap: '6px', justifyContent: 'center', alignItems: 'center' },
+  iconBtn: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', color: '#374151', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' },
+  iconBtnSquare: { backgroundColor: '#FFFBEB', border: '1px solid #FDE68A', padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' },
 
-  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: '#F9FAFB' },
+  pagination: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: '#F9FAFB', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' },
   pageBtn: { padding: '6px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', backgroundColor: 'white', cursor: 'pointer', fontWeight: 'bold', color: '#374151' },
   pageInfo: { color: '#6B7280', fontSize: '13px' },
 
-  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
-  modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '450px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' },
-  largeModalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '700px', maxWidth: '90vw', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' },
-  closeBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#9CA3AF', transition: '0.2s' },
-  sectionHeader: { margin: '20px 0 10px 0', color: '#374151', fontSize: '16px', borderBottom: '2px solid #F3F4F6', paddingBottom: '5px' },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  input: { padding: '10px 15px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none' },
-  rateWrapper: { display: 'flex', alignItems: 'center', border: '1px solid #D1D5DB', borderRadius: '6px', overflow: 'hidden', backgroundColor: 'white' },
-  currencySymbol: { padding: '10px 15px', backgroundColor: '#F3F4F6', color: '#4B5563', fontWeight: 'bold', borderRight: '1px solid #D1D5DB' },
-  rateInput: { flex: 1, padding: '10px', border: 'none', fontSize: '14px', outline: 'none' },
-  statsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
-  statBox: { backgroundColor: '#F9FAFB', padding: '15px', borderRadius: '8px', border: '1px solid #E5E7EB' },
-  statLabel: { margin: 0, fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', fontWeight: 'bold' },
-  statValue: { margin: '5px 0 0 0', fontSize: '24px', color: '#111827' },
-  saveBtn: { backgroundColor: '#10B981', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-  cancelBtn: { backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-  insightBtn: { backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-  editBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-  archiveBtn: { backgroundColor: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-  passwordBtn: { backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }
+  modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' },
+  modalBox: { backgroundColor: 'white', padding: '25px', borderRadius: '16px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
+  largeModalBox: { backgroundColor: 'white', padding: '25px', borderRadius: '16px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflow: 'hidden', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
+  closeBtn: { background: 'none', border: 'none', fontSize: '22px', cursor: 'pointer', color: '#9CA3AF' },
+  sectionHeader: { margin: '15px 0 10px 0', color: '#374151', fontSize: '15px', borderBottom: '2px solid #F3F4F6', paddingBottom: '4px', fontWeight: '700' },
+  formGrid: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  input: { padding: '10px 12px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' },
+  fullWidthInput: { width: '100%', boxSizing: 'border-box' },
+  rateWrapper: { display: 'flex', alignItems: 'center', border: '1px solid #D1D5DB', borderRadius: '6px', overflow: 'hidden', backgroundColor: 'white', width: '100%', boxSizing: 'border-box' },
+  currencySymbol: { padding: '10px 12px', backgroundColor: '#F3F4F6', color: '#4B5563', fontWeight: 'bold', borderRight: '1px solid #D1D5DB', fontSize: '13px', whiteSpace: 'nowrap' },
+  rateInput: { flex: 1, padding: '10px', border: 'none', fontSize: '14px', outline: 'none', width: '100%' },
+  statsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' },
+  statBox: { backgroundColor: '#F9FAFB', padding: '12px', borderRadius: '8px', border: '1px solid #E5E7EB' },
+  statLabel: { margin: 0, fontSize: '11px', color: '#6B7280', textTransform: 'uppercase', fontWeight: 'bold' },
+  statValue: { margin: '4px 0 0 0', fontSize: '20px', color: '#111827', fontWeight: '700' },
+  saveBtn: { backgroundColor: '#10B981', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  cancelBtn: { backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  insightBtn: { backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  editBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  archiveBtn: { backgroundColor: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
+  passwordBtn: { backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '8px 14px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' }
 };
