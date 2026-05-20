@@ -80,17 +80,17 @@ export default function AdminDashboard() {
   };
 
   const fetchTimesheets = async () => {
-    // 🔥 FIX: Grab the admin data to send the tenant ID for the security check!
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets`, {
-        headers: { 'x-tenant-id': admin?.tenant_id } // 🔥 This unlocks the queue!
+        headers: { 'x-tenant-id': admin?.tenant_id } 
       });
       const data = await response.json();
       if (data.success) {
         const dataWithMockProof = data.data.map(ts => ({
           ...ts,
-          screenshot_urls: ts.screenshot_urls || [
+          // 🔥 FIX 1 IS HERE: Explicitly checking array length so empty arrays get placeholders
+          screenshot_urls: (ts.screenshot_urls && ts.screenshot_urls.length > 0) ? ts.screenshot_urls : [
             'https://placehold.co/600x400/E5E7EB/4B5563?text=Timesheet+Proof+1',
             'https://placehold.co/600x400/E5E7EB/4B5563?text=Timesheet+Proof+2'
           ]
@@ -184,7 +184,6 @@ export default function AdminDashboard() {
       if (filterMonth === 'ALL' && filterYear === 'ALL') return true;
       
       const tsDate = new Date(ts.period_start);
-      // 🔥 FIX: Use UTC to ensure dates submitted at midnight don't shift to the previous month!
       const tsMonth = String(tsDate.getUTCMonth() + 1).padStart(2, '0'); 
       const tsYear = String(tsDate.getUTCFullYear());
 
@@ -196,7 +195,6 @@ export default function AdminDashboard() {
   }
 
   filteredList = filteredList.filter(ts => {
-    // 🔥 Updated to search by Vendor name as well!
     const searchString = `${ts.first_name} ${ts.last_name} ${ts.vendor_name || ''}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   });
@@ -221,7 +219,6 @@ export default function AdminDashboard() {
   }
 
   return (
-    // 🔥 CRITICAL LAYOUT UPDATE: Flexbox column, max 100vh height
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
       <div style={styles.header}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -284,7 +281,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* 🔥 CRITICAL LAYOUT UPDATE: Flex 1 applied to table container to fill space and scroll internally */}
       <div style={styles.tableContainer}>
         {loading ? (
           <p style={{ padding: '20px' }}>Loading queue...</p>
@@ -421,7 +417,8 @@ export default function AdminDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '15px' }}>
                     {drawerItem.screenshot_urls.map((url, i) => (
                       <a key={i} href={url} target="_blank" rel="noreferrer" style={styles.imageCard} className="proof-image-card">
-                        <div style={{ ...styles.imagePreview, backgroundImage: `url(${url})` }}></div>
+                        {/* 🔥 FIX 2 IS HERE: Added single quotes around ${url} */}
+                        <div style={{ ...styles.imagePreview, backgroundImage: `url('${url}')` }}></div>
                         <div style={{ padding: '10px', fontSize: '12px', color: '#4B5563', textAlign: 'center', backgroundColor: 'white' }}>Image {i+1}</div>
                       </a>
                     ))}
@@ -522,7 +519,6 @@ export default function AdminDashboard() {
 }
 
 const styles = {
-  // 🔥 CRITICAL LAYOUT UPDATE: Prevent header/bulk bar from shrinking when page resizes
   header: { flexShrink: 0, marginBottom: '20px' },
   title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0' },
   subtitle: { color: '#6B7280', margin: 0 },
@@ -531,14 +527,11 @@ const styles = {
   toggleInactive: { backgroundColor: 'transparent', color: '#6B7280', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' },
   searchInput: { padding: '10px 15px', borderRadius: '8px', border: '1px solid #D1D5DB', width: '200px', fontSize: '14px', outline: 'none' },
   
-  // Prevent bulkbar from shrinking
   bulkBar: { flexShrink: 0, backgroundColor: '#E0E7FF', padding: '12px 20px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', border: '1px solid #C7D2FE' },
   
-  // 🔥 CRITICAL LAYOUT UPDATE: Make Table Container Flex-grow, set minHeight, allow scrolling 
   tableContainer: { flex: 1, minHeight: 0, overflowY: 'auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #F3F4F6', position: 'relative' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
   
-  // 🔥 CRITICAL LAYOUT UPDATE: Added position: sticky so the headers stay visible while scrolling!
   tableHead: { backgroundColor: '#F9FAFB', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 10 },
   
   th: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px' },
@@ -553,7 +546,6 @@ const styles = {
   approveBtn: { backgroundColor: '#10B981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' },
   rejectBtn: { backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' },
   
-  // Drawer Styles
   drawerOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.5)', zIndex: 999, display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(2px)' },
   drawerPanel: { width: '500px', backgroundColor: '#F9FAFB', height: '100%', boxShadow: '-15px 0 30px rgba(0,0,0,0.15)', overflowY: 'auto' },
   drawerHeader: { display: 'flex', justifyContent: 'space-between', padding: '20px', borderBottom: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' },
@@ -561,7 +553,6 @@ const styles = {
   imageCard: { display: 'block', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden', textDecoration: 'none', backgroundColor: 'white' },
   imagePreview: { height: '180px', backgroundColor: '#F3F4F6', backgroundSize: 'cover', backgroundPosition: 'center', borderBottom: '1px solid #E5E7EB' },
   
-  // Modal Styles
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
   modalReceipt: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '15px' },
@@ -571,7 +562,6 @@ const styles = {
   submitBtn: { color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
   cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', flex: 1 },
 
-  // Empty State Styles
   emptyStateContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', backgroundColor: '#FFFFFF', textAlign: 'center' },
   emptyStateIcon: { width: '64px', height: '64px', color: '#D1D5DB', marginBottom: '20px' },
   emptyStateText: { color: '#374151', fontSize: '20px', fontWeight: '600', margin: '0' }
