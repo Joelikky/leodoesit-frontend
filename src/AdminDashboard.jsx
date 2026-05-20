@@ -221,7 +221,8 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    // 🔥 CRITICAL LAYOUT UPDATE: Flexbox column, max 100vh height
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
       <div style={styles.header}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -283,6 +284,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* 🔥 CRITICAL LAYOUT UPDATE: Flex 1 applied to table container to fill space and scroll internally */}
       <div style={styles.tableContainer}>
         {loading ? (
           <p style={{ padding: '20px' }}>Loading queue...</p>
@@ -520,17 +522,25 @@ export default function AdminDashboard() {
 }
 
 const styles = {
-  header: { marginBottom: '20px' },
+  // 🔥 CRITICAL LAYOUT UPDATE: Prevent header/bulk bar from shrinking when page resizes
+  header: { flexShrink: 0, marginBottom: '20px' },
   title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0' },
   subtitle: { color: '#6B7280', margin: 0 },
   toggleGroup: { display: 'flex', backgroundColor: '#F3F4F6', borderRadius: '8px', padding: '4px' },
   toggleActive: { backgroundColor: 'white', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', cursor: 'pointer' },
   toggleInactive: { backgroundColor: 'transparent', color: '#6B7280', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' },
   searchInput: { padding: '10px 15px', borderRadius: '8px', border: '1px solid #D1D5DB', width: '200px', fontSize: '14px', outline: 'none' },
-  bulkBar: { backgroundColor: '#E0E7FF', padding: '12px 20px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', border: '1px solid #C7D2FE' },
-  tableContainer: { backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden', border: '1px solid #F3F4F6' },
+  
+  // Prevent bulkbar from shrinking
+  bulkBar: { flexShrink: 0, backgroundColor: '#E0E7FF', padding: '12px 20px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', border: '1px solid #C7D2FE' },
+  
+  // 🔥 CRITICAL LAYOUT UPDATE: Make Table Container Flex-grow, set minHeight, allow scrolling 
+  tableContainer: { flex: 1, minHeight: 0, overflowY: 'auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #F3F4F6', position: 'relative' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-  tableHead: { backgroundColor: '#F9FAFB', borderBottom: '2px solid #E5E7EB' },
+  
+  // 🔥 CRITICAL LAYOUT UPDATE: Added position: sticky so the headers stay visible while scrolling!
+  tableHead: { backgroundColor: '#F9FAFB', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 10 },
+  
   th: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px' },
   thSortable: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px', cursor: 'pointer', userSelect: 'none' },
   tableRow: { borderBottom: '1px solid #F3F4F6', cursor: 'pointer' },
