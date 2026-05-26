@@ -82,6 +82,7 @@ export default function InvoiceLedger() {
     setSelectedInvoices([]);
 
     setInvoices(prev => {
+      // 🛠️ FIX: Explicitly check for state match structure of 'VOID' to align with PostgreSQL constraints
       if (action === 'VOID') return prev.map(inv => targets.includes(inv.id) ? { ...inv, status: 'VOID' } : inv);
       return prev.map(inv => {
         if (targets.includes(inv.id)) {
@@ -101,7 +102,6 @@ export default function InvoiceLedger() {
     await executeBackgroundAction(action, targets, partialAmount);
   };
 
-  // 🔥 THE FIX: Throttled Bulk Actions
   const executeBackgroundAction = async (action, targets, paymentAmount) => {
     try {
       for (let i = 0; i < targets.length; i++) {
@@ -118,7 +118,6 @@ export default function InvoiceLedger() {
            console.log(`✅ ${res.message}`); 
         }
 
-        // 🔥 If this is a bulk action, pause for 3 seconds before sending the next one
         if (targets.length > 1 && i < targets.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
@@ -147,7 +146,6 @@ export default function InvoiceLedger() {
   const safeInvoices = Array.isArray(invoices) ? invoices : [];
   
   const fullyFilteredInvoices = safeInvoices.filter(inv => {
-    // A. Month & Year Filter
     let matchDate = true;
     if (filterMonth !== 'ALL' || filterYear !== 'ALL') {
        const invDate = inv.due_date ? new Date(inv.due_date) : new Date();
@@ -160,10 +158,8 @@ export default function InvoiceLedger() {
        } else { matchDate = false; }
     }
 
-    // B. Vendor Dropdown Filter
     const matchVendor = filterVendor === 'ALL' || String(inv.client_name || '').toLowerCase() === String(filterVendor).toLowerCase();
 
-    // C. Search Bar Filter
     const searchString = `${inv.client_name || ''} ${inv.invoice_number || ''} ${inv.first_name || ''} ${inv.last_name || ''}`.toLowerCase();
     const searchTermsArray = (searchTerm || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
     const matchSearch = searchTermsArray.length === 0 || searchTermsArray.every(term => searchString.includes(term));
@@ -362,10 +358,9 @@ export default function InvoiceLedger() {
                   <td style={styles.td} onClick={e => e.stopPropagation()}>
                     <div style={styles.actionGroup}>
                       <button onClick={(e) => downloadPDF(e, inv)} style={{...styles.downloadBtn, backgroundColor: '#374151'}}>View</button>
-                      
-                      {/* 🔥 NEW INDIVIDUAL EMAIL BUTTON */}
                       <button onClick={() => handleActionClick('EMAIL', inv.id, false)} style={{...styles.downloadBtn, backgroundColor: '#3B82F6'}}>Mail</button>
 
+                      {/* 🛠️ FIX: Only render core mutations if the configuration state is explicitly active and not 'VOID' */}
                       {inv.status !== 'VOID' && (
                         <>
                           <button onClick={() => handleActionClick('PAY', inv.id)} style={{...styles.downloadBtn, backgroundColor: '#10B981'}}>Pay</button>
@@ -452,18 +447,13 @@ export default function InvoiceLedger() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '30px' }}>
                 <button onClick={(e) => downloadPDF(e, drawerInvoice)} style={{...styles.submitBtn, backgroundColor: '#1F2937'}}>📄 Download PDF Invoice</button>
-                
-                {/* 🔥 NEW INDIVIDUAL EMAIL BUTTON IN DRAWER */}
-                <button onClick={() => handleActionClick('EMAIL', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#3B82F6'}}>
-                   ✉️ Send Invoice Email
-                </button>
+                <button onClick={() => handleActionClick('EMAIL', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#3B82F6'}}>✉️ Send Invoice Email</button>
 
+                {/* 🛠️ FIX: Cleanly strip contextual interactive inputs out of the drawer pane if the entity has already been marked as VOID */}
                 {drawerInvoice.status !== 'VOID' && (
                   <>
                     {drawerInvoice.status === 'PARTIAL' && (
-                       <button onClick={() => handleActionClick('REMIND', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#F59E0B'}}>
-                         🔔 Send Balance Reminder
-                       </button>
+                       <button onClick={() => handleActionClick('REMIND', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#F59E0B'}}>🔔 Send Balance Reminder</button>
                     )}
                     <button onClick={() => handleActionClick('PAY', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: drawerInvoice.status === 'PAID' ? '#8B5CF6' : '#10B981'}}>
                       {drawerInvoice.status === 'PAID' ? '✏️ Adjust / Refund Overpayment' : 'Record Payment'}
