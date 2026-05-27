@@ -31,7 +31,18 @@ export default function AdminLayout() {
 
   // THE BOUNCER & BRANDING LOGIC
   useEffect(() => {
-    const userString = localStorage.getItem('leodoesit_user');
+    // 🔥 FIX 1: Extract uid parameter from URL query string to match Login.jsx layout
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
+
+    if (!urlUid) {
+      console.error("UID parameter missing from admin URL route.");
+      navigate('/');
+      return;
+    }
+
+    // 🔥 FIX 2: Look up user in sessionStorage using the active user dynamic key pattern
+    const userString = sessionStorage.getItem(`user_${urlUid}`);
     
     if (!userString) {
       navigate('/');
@@ -41,14 +52,15 @@ export default function AdminLayout() {
     const user = JSON.parse(userString);
     if (user.role !== 'ADMIN') {
       alert("Unauthorized access. Admins only.");
-      localStorage.removeItem('leodoesit_user');
+      sessionStorage.removeItem(`user_${urlUid}`);
+      sessionStorage.removeItem(`token_${urlUid}`);
       navigate('/');
       return;
     }
 
-    // 🔥 4. DYNAMIC BRANDING & BROWSER TAB LOGIC
+    // 4. DYNAMIC BRANDING & BROWSER TAB LOGIC
     if (user.tenant_name) {
-      if (user.tenant_name.toLowerCase() === 'gandiva') {
+      if (user.tenant_name.toLowerCase().includes('gandiva')) {
         setCompanyName('Gandiva Insights');
         setThemeColor('#4F46E5'); 
         
@@ -65,10 +77,16 @@ export default function AdminLayout() {
       }
     }
 
-  }, [navigate]);
+  }, [navigate, location.search]);
 
   const handleLogout = () => {
-    localStorage.removeItem('leodoesit_user');
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
+
+    if (urlUid) {
+      sessionStorage.removeItem(`user_${urlUid}`);
+      sessionStorage.removeItem(`token_${urlUid}`);
+    }
     
     // Reset browser tab to default when logging out
     document.title = "Portal Login";
@@ -76,6 +94,11 @@ export default function AdminLayout() {
     
     navigate('/');
   };
+
+  // Helper utility to make sure links carry over the tracking ?uid= param to nested dashboard states
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+  const appendUid = currentUid ? `?uid=${currentUid}` : '';
 
   return (
     <div style={styles.container}>
@@ -99,35 +122,35 @@ export default function AdminLayout() {
           </div>
         </div>
         
+        {/* Updated link tags to keep URL parameter query context intact */}
         <nav style={styles.nav}>
-          <Link to="/admin/queue" style={path.includes('/queue') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/queue${appendUid}`} style={path.includes('/queue') ? styles.activeNavItem : styles.navItem}>
             📋 Approval Queue
           </Link>
-          <Link to="/admin/hub" style={path.includes('/hub') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/hub${appendUid}`} style={path.includes('/hub') ? styles.activeNavItem : styles.navItem}>
             💵 Invoicing Hub
           </Link>
-          <Link to="/admin/ledger" style={path.includes('/ledger') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/ledger${appendUid}`} style={path.includes('/ledger') ? styles.activeNavItem : styles.navItem}>
             📚 Invoice Ledger
           </Link>
           
-          <Link to="/admin/clients" style={path.includes('/clients') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/clients${appendUid}`} style={path.includes('/clients') ? styles.activeNavItem : styles.navItem}>
             🏢 Vendors
           </Link>
           
-          <Link to="/admin/sub-vendors" style={path.includes('/sub-vendors') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/sub-vendors${appendUid}`} style={path.includes('/sub-vendors') ? styles.activeNavItem : styles.navItem}>
             🤝 Sub Vendors
           </Link>
           
-          <Link to="/admin/contractors" style={path.includes('/contractors') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/contractors${appendUid}`} style={path.includes('/contractors') ? styles.activeNavItem : styles.navItem}>
             👷 Contractors
           </Link>
 
-          {/* 🔥 ADDED: Timesheets Route */}
-          <Link to="/admin/timesheets" style={path.includes('/timesheets') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/timesheets${appendUid}`} style={path.includes('/timesheets') ? styles.activeNavItem : styles.navItem}>
             🕒 Timesheets
           </Link>
           
-          <Link to="/admin/reports" style={path.includes('/reports') ? styles.activeNavItem : styles.navItem}>
+          <Link to={`/admin/reports${appendUid}`} style={path.includes('/reports') ? styles.activeNavItem : styles.navItem}>
             📊 Reports
           </Link>
         </nav>
@@ -148,29 +171,11 @@ export default function AdminLayout() {
   );
 }
 
-// Enterprise SaaS Styling
 const styles = {
   container: { display: 'flex', minHeight: '100vh', backgroundColor: '#F3F4F6', fontFamily: 'system-ui, sans-serif' },
   sidebar: { width: '250px', backgroundColor: '#111827', color: 'white', padding: '20px', display: 'flex', flexDirection: 'column' },
-  
-  logoContainer: { 
-    marginBottom: '40px', 
-    textAlign: 'center',
-    display: 'flex',
-    justifyContent: 'center'
-  },
-  
-  // Clean, Solid White Background for Sidebar Logo
-  logoBadge: {
-    backgroundColor: 'white', 
-    padding: '8px 12px', 
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', 
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  
+  logoContainer: { marginBottom: '40px', textAlign: 'center', display: 'flex', justifyContent: 'center' },
+  logoBadge: { backgroundColor: 'white', padding: '8px 12px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   nav: { display: 'flex', flexDirection: 'column', gap: '15px' },
   activeNavItem: { backgroundColor: '#374151', padding: '10px 15px', borderRadius: '6px', fontWeight: 'bold', color: 'white', textDecoration: 'none', display: 'block' },
   navItem: { padding: '10px 15px', color: '#9CA3AF', textDecoration: 'none', display: 'block', transition: '0.2s' },
