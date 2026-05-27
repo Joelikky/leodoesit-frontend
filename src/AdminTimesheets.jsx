@@ -21,23 +21,32 @@ export default function AdminTimesheets() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Track the tenant ID locally to manage clean re-fetches if state delays
+  const adminUser = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const currentTenantId = adminUser?.tenant_id;
 
-  const fetchData = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  useEffect(() => {
+    // 🛡️ FRONTEND GUARDRAIL: Do not fetch if the UUID context is not ready yet
+    if (!currentTenantId || currentTenantId === 'undefined' || currentTenantId === 'null') {
+      setLoading(false);
+      return; 
+    }
+    
+    fetchData(currentTenantId);
+  }, [currentTenantId]); // Refetches smoothly if tenant context takes a moment to stabilize
+
+  const fetchData = async (tenantId) => {
     setLoading(true);
     try {
       // 1. Fetch all active contractors
       const userRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
       });
       const userData = await userRes.json();
       
       // 2. Fetch all timesheets
       const tsRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
       });
       const tsData = await tsRes.json();
 
@@ -58,7 +67,6 @@ export default function AdminTimesheets() {
   // 🔥 THE MASTER ENGINE: Cross-reference contractors with timesheets for the selected month
   const buildMasterList = () => {
     return contractors.map(contractor => {
-      // Find if this contractor submitted a timesheet for the selected month/year
       const submittedSheet = allTimesheets.find(ts => {
         if (!ts.period_start || ts.user_id !== contractor.id) return false;
         const tsDate = new Date(ts.period_start);
@@ -68,7 +76,6 @@ export default function AdminTimesheets() {
       if (submittedSheet) {
         return { ...contractor, timesheet: submittedSheet, status: submittedSheet.status };
       } else {
-        // If no timesheet is found, flag them as MISSING
         return { ...contractor, timesheet: null, status: 'MISSING' };
       }
     });
@@ -94,7 +101,6 @@ export default function AdminTimesheets() {
 
   // --- ACTION HANDLERS ---
   
-  // Update Timesheet Status (Approve/Reject)
   const handleUpdateStatus = async (timesheetId, newStatus) => {
     if (newStatus === 'REJECTED' && !rejectionReason.trim()) {
       alert("Please provide a reason for rejection so the contractor can fix it.");
@@ -102,11 +108,10 @@ export default function AdminTimesheets() {
     }
 
     setIsSubmitting(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${timesheetId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': currentTenantId },
         body: JSON.stringify({ status: newStatus, admin_notes: rejectionReason })
       });
       const data = await response.json();
@@ -115,7 +120,7 @@ export default function AdminTimesheets() {
         alert(`Timesheet marked as ${newStatus}`);
         setReviewingTimesheet(null);
         setRejectionReason('');
-        fetchData(); // Refresh the data to update the UI
+        fetchData(currentTenantId); // Pass tenant context explicitly on refresh
       } else {
         alert("Failed to update status: " + data.error);
       }
@@ -126,15 +131,13 @@ export default function AdminTimesheets() {
     }
   };
 
-  // 🔥 NEW: Trigger the Manual Reminder Email
   const handleRemind = async (contractor) => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
     const monthName = MONTHS[viewMonth];
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/remind`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
+        headers: { 'Content-Type': 'application/json', 'x-tenant-id': currentTenantId },
         body: JSON.stringify({ 
           email: contractor.email, 
           first_name: contractor.first_name,
@@ -228,6 +231,8 @@ export default function AdminTimesheets() {
 
         {loading ? (
           <p style={{ padding: '30px', textAlign: 'center' }}>Loading timesheet data...</p>
+        ) : (!currentTenantId || currentTenantId === 'undefined') ? (
+          <p style={{ padding: '30px', textAlign: 'center', color: '#DC2626' }}>⚠️ Missing workspace verification headers. Please log out and re-authenticate.</p>
         ) : filteredList.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{ fontSize: '30px', marginBottom: '10px' }}>🕵️</div>
@@ -276,7 +281,6 @@ export default function AdminTimesheets() {
                     
                     <td style={styles.tdCentered}>
                       {item.status === 'MISSING' ? (
-                        /* 🔥 UPDATED: Triggers handleRemind on click */
                         <button onClick={() => handleRemind(item)} style={styles.remindBtn}>
                           🔔 Remind
                         </button>
