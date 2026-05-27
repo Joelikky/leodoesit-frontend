@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
+// 🔥 FIX 1: Import the shared structural context hook
+import { useOutletContext } from 'react-router-dom';
 
 export default function Reports() {
+  // 🔥 FIX 2: Safely extract parent layout context variable headers with an empty object fallback
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: If structural context loops lag on page refresh, fetch parameters from sessionStorage
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`) || sessionStorage.getItem('leodoesit_user');
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
+  }
+
+  const currentTenantId = adminUser?.tenant_id;
+
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,14 +34,30 @@ export default function Reports() {
   const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   useEffect(() => {
-    fetchInvoices();
-  }, []);
+    // 🔥 FIX 3: Robust Multi-Tenant framework safety shield guard check
+    if (
+      !currentTenantId || 
+      currentTenantId === 'undefined' || 
+      currentTenantId === 'null' || 
+      !adminToken
+    ) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchInvoices = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+    fetchInvoices(currentTenantId, adminToken);
+  }, [currentTenantId, adminToken]);
+
+  const fetchInvoices = async (tenantId, token) => {
+    setLoading(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+        headers: { 
+          'Content-Type': 'application/json', 
+          // 🔥 FIX 4: Pass valid multi-tenant framework properties cleanly
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -45,7 +82,7 @@ export default function Reports() {
   const safeInvoices = Array.isArray(invoices) ? invoices : [];
   
   const filteredInvoices = safeInvoices.filter(inv => {
-    if (inv.status === 'VOID') return false;
+    if (!inv || inv.status === 'VOID') return false;
 
     // Filter by Date (Month & Year)
     let matchDate = true;
@@ -84,7 +121,7 @@ export default function Reports() {
   const totalOverdue = filteredInvoices.reduce((sum, inv) => {
     if (inv.status === 'PAID') return sum;
     const dueDate = new Date(inv.due_date);
-    if (dueDate < today) {
+    if (!isNaN(dueDate.getTime()) && dueDate < today) {
        const invoiced = parseFloat(inv.amount_invoiced || 0);
        const paid = parseFloat(inv.amount_paid || 0);
        return sum + Math.max(0, invoiced - paid);
@@ -195,7 +232,7 @@ export default function Reports() {
         {/* Clear Filters Button */}
         <div style={{ display: 'flex', alignItems: 'flex-end', marginLeft: 'auto' }}>
           <button onClick={handleClearFilters} style={styles.clearBtn}>
-             Clear Filters
+              Clear Filters
           </button>
         </div>
       </div>
@@ -236,77 +273,83 @@ export default function Reports() {
 
       {/* --- DETAILED MONTHLY BREAKDOWN TABLE --- */}
       <div style={styles.tableContainer}>
-        <div style={styles.tableHeader}>
-           <h3 style={{ margin: 0, color: '#111827' }}>
-               {filterVendor === 'ALL' ? 'Company-Wide Breakdown' : `Breakdown: ${filterVendor}`}
-               {filterEmp !== 'ALL' && ` (${filterEmp})`}
-           </h3>
-           <span style={{ fontSize: '14px', color: '#6B7280' }}>
-             {filterMonth !== 'ALL' ? `${monthNames[filterMonth]} ` : ''}{filterYear === 'ALL' ? 'All Time' : filterYear}
-           </span>
-        </div>
-        
-        <table style={styles.table}>
-          <thead>
-            <tr style={styles.thRow}>
-              <th style={styles.th}>Month</th>
-              <th style={{...styles.th, textAlign: 'center'}}>Invoices Generated</th>
-              <th style={{...styles.th, textAlign: 'right'}}>Total Billed</th>
-              <th style={{...styles.th, textAlign: 'right'}}>Total Paid</th>
-              <th style={{...styles.th, textAlign: 'right'}}>Outstanding Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {monthlyDataArray.map((data, idx) => {
-              const monthOutstanding = data.totalBilled - data.totalPaid;
-              const hasData = data.invoicesCount > 0;
-              const employeeNames = Object.keys(data.employees);
+        {(!currentTenantId || currentTenantId === 'undefined') ? (
+          <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework context. Re-authenticating...</p>
+        ) : (
+          <>
+            <div style={styles.tableHeader}>
+               <h3 style={{ margin: 0, color: '#111827' }}>
+                   {filterVendor === 'ALL' ? 'Company-Wide Breakdown' : `Breakdown: ${filterVendor}`}
+                   {filterEmp !== 'ALL' && ` (${filterEmp})`}
+               </h3>
+               <span style={{ fontSize: '14px', color: '#6B7280' }}>
+                 {filterMonth !== 'ALL' ? `${monthNames[filterMonth]} ` : ''}{filterYear === 'ALL' ? 'All Time' : filterYear}
+               </span>
+            </div>
+            
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.thRow}>
+                  <th style={styles.th}>Month</th>
+                  <th style={{...styles.th, textAlign: 'center'}}>Invoices Generated</th>
+                  <th style={{...styles.th, textAlign: 'right'}}>Total Billed</th>
+                  <th style={{...styles.th, textAlign: 'right'}}>Total Paid</th>
+                  <th style={{...styles.th, textAlign: 'right'}}>Outstanding Balance</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyDataArray.map((data, idx) => {
+                  const monthOutstanding = data.totalBilled - data.totalPaid;
+                  const hasData = data.invoicesCount > 0;
+                  const employeeNames = Object.keys(data.employees);
 
-              return (
-                <React.Fragment key={idx}>
-                  {/* MAIN MONTH ROW */}
-                  <tr style={{...styles.tdRow, backgroundColor: hasData ? '#ffffff' : '#F9FAFB', opacity: hasData ? 1 : 0.6}}>
-                    <td style={{...styles.td, fontWeight: 'bold', color: '#111827'}}>{data.monthName}</td>
-                    <td style={{...styles.td, textAlign: 'center'}}>{data.invoicesCount}</td>
-                    <td style={{...styles.td, textAlign: 'right', fontWeight: '600'}}>${data.totalBilled.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td style={{...styles.td, textAlign: 'right', color: '#059669', fontWeight: '600'}}>${data.totalPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-                    <td style={{...styles.td, textAlign: 'right', color: monthOutstanding > 0 ? '#D97706' : '#6B7280', fontWeight: '600'}}>
-                       ${Math.max(0, monthOutstanding).toLocaleString(undefined, {minimumFractionDigits: 2})}
-                    </td>
-                  </tr>
-                  
-                  {/* EMPLOYEE SUB-ROWS (Only show if there is data) */}
-                  {hasData && employeeNames.length > 0 && (
-                    <tr>
-                      <td colSpan="5" style={{ padding: 0, borderBottom: '2px solid #E5E7EB' }}>
-                        <div style={styles.subTableContainer}>
-                           <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px' }}>
-                             Employee Breakdown for {data.monthName}:
-                           </div>
-                           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                              <tbody>
-                                {employeeNames.map(emp => (
-                                  <tr key={emp}>
-                                    <td style={{ padding: '6px 0', fontSize: '13px', color: '#4B5563', width: '30%' }}>↳ {emp}</td>
-                                    <td style={{ padding: '6px 0', fontSize: '13px', color: '#4B5563', textAlign: 'right', width: '35%' }}>
-                                      Billed: ${data.employees[emp].billed.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                    </td>
-                                    <td style={{ padding: '6px 0', fontSize: '13px', color: '#059669', textAlign: 'right', width: '35%' }}>
-                                      Paid: ${data.employees[emp].paid.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                           </table>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                  return (
+                    <React.Fragment key={idx}>
+                      {/* MAIN MONTH ROW */}
+                      <tr style={{...styles.tdRow, backgroundColor: hasData ? '#ffffff' : '#F9FAFB', opacity: hasData ? 1 : 0.6}}>
+                        <td style={{...styles.td, fontWeight: 'bold', color: '#111827'}}>{data.monthName}</td>
+                        <td style={{...styles.td, textAlign: 'center'}}>{data.invoicesCount}</td>
+                        <td style={{...styles.td, textAlign: 'right', fontWeight: '600'}}>${data.totalBilled.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td style={{...styles.td, textAlign: 'right', color: '#059669', fontWeight: '600'}}>${data.totalPaid.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
+                        <td style={{...styles.td, textAlign: 'right', color: monthOutstanding > 0 ? '#D97706' : '#6B7280', fontWeight: '600'}}>
+                           ${Math.max(0, monthOutstanding).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                        </td>
+                      </tr>
+                      
+                      {/* EMPLOYEE SUB-ROWS (Only show if there is data) */}
+                      {hasData && employeeNames.length > 0 && (
+                        <tr>
+                          <td colSpan="5" style={{ padding: 0, borderBottom: '2px solid #E5E7EB' }}>
+                            <div style={styles.subTableContainer}>
+                               <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#6B7280', textTransform: 'uppercase', marginBottom: '8px' }}>
+                                 Employee Breakdown for {data.monthName}:
+                               </div>
+                               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                  <tbody>
+                                    {employeeNames.map(emp => (
+                                      <tr key={emp}>
+                                        <td style={{ padding: '6px 0', fontSize: '13px', color: '#4B5563', width: '30%' }}>↳ {emp}</td>
+                                        <td style={{ padding: '6px 0', fontSize: '13px', color: '#4B5563', textAlign: 'right', width: '35%' }}>
+                                          Billed: ${data.employees[emp].billed.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                        </td>
+                                        <td style={{ padding: '6px 0', fontSize: '13px', color: '#059669', textAlign: 'right', width: '35%' }}>
+                                          Paid: ${data.employees[emp].paid.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                               </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
     </div>

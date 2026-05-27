@@ -1,6 +1,27 @@
 import React, { useState, useEffect } from 'react';
+// 🔥 FIX 1: Import the shared structural context hook
+import { useOutletContext } from 'react-router-dom';
 
 export default function Contractors() {
+  // 🔥 FIX 2: Extract context variables safely with an empty object fallback
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: If layout wrapper context lags, parse tracking parameters from sessionStorage
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`) || sessionStorage.getItem('leodoesit_user');
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
+  }
+
+  const currentTenantId = adminUser?.tenant_id;
+
   const [contractors, setContractors] = useState([]);
   const [invoices, setInvoices] = useState([]); 
   const [clients, setClients] = useState([]);
@@ -45,69 +66,101 @@ export default function Contractors() {
   const [formData, setFormData] = useState(initialFormState);
 
   useEffect(() => {
-    fetchContractors();
-    fetchInvoices(); 
-    fetchClients();
-    fetchSubVendors(); 
-  }, []);
+    // 🔥 FIX 3: Robust Multi-Tenant framework shield guard check
+    if (
+      !currentTenantId || 
+      currentTenantId === 'undefined' || 
+      currentTenantId === 'null' || 
+      !adminToken
+    ) {
+      setLoading(false);
+      return;
+    }
+
+    fetchContractors(currentTenantId, adminToken);
+    fetchInvoices(currentTenantId, adminToken); 
+    fetchClients(currentTenantId, adminToken);
+    fetchSubVendors(currentTenantId, adminToken); 
+  }, [currentTenantId, adminToken]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedContracts, selectedVisas, selectedVendors, showArchive]);
 
   // --- API Calls ---
-  const fetchContractors = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const fetchContractors = async (tenantId, token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`, {
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      if (data.success) setContractors(data.data);
-    } catch (error) { console.error(error); } finally { setLoading(false); }
+      if (data.success) setContractors(data.data || []);
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
-  const fetchInvoices = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const fetchInvoices = async (tenantId, token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices`, {
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      if (data.success) setInvoices(data.data);
+      if (data.success) setInvoices(data.data || []);
     } catch (error) { console.error(error); }
   };
 
-  const fetchClients = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const fetchClients = async (tenantId, token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/clients`, {
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      if (data.success) setClients(data.data);
+      if (data.success) setClients(data.data || []);
     } catch (error) { console.error(error); }
   };
 
-  const fetchSubVendors = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const fetchSubVendors = async (tenantId, token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sub_vendors`, {
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      if (data.success) setSubVendors(data.data);
+      if (data.success) setSubVendors(data.data || []);
     } catch (error) { console.error(error); }
   };
 
   // --- Handlers ---
   const handleArchiveContractor = async (id, name) => {
+    if (!currentTenantId || !adminToken) return;
     if (!window.confirm(`Move ${name} to the Archive?`)) return;
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}`, { 
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${id}`, { 
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -118,11 +171,15 @@ export default function Contractors() {
   };
 
   const handleRestoreContractor = async (id, name) => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+    if (!currentTenantId || !adminToken) return;
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}/restore`, {
-      method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${id}/restore`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        }
       });
       const data = await response.json();
       if (data.success) setContractors(contractors.map(c => c.id === id ? { ...c, is_deleted: false } : c));
@@ -130,13 +187,18 @@ export default function Contractors() {
   };
 
   const handlePermanentDelete = async (id, name) => {
+    if (!currentTenantId || !adminToken) return;
     const confirmText = window.prompt(`Type "DELETE" to permanently destroy the record for ${name}.`);
     if (confirmText?.trim() !== "DELETE") return;
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${id}/permanent`, { 
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${id}/permanent`, { 
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -211,28 +273,40 @@ export default function Contractors() {
 
   const handleAddContractor = async (e) => {
     e.preventDefault();
+    if (!currentTenantId || !adminToken) return;
     setIsSubmitting(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`, {
         method: 'POST', 
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
-        body: JSON.stringify({ ...formData, tenant_id: admin?.tenant_id })
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ ...formData, tenant_id: currentTenantId })
       });
       const data = await response.json();
-      if (data.success) { fetchContractors(); handleCloseAddModal(); } 
-      else { alert("Failed to add: " + data.error); }
+      if (data.success) { 
+        fetchContractors(currentTenantId, adminToken); 
+        handleCloseAddModal(); 
+      } else { alert("Failed to add: " + data.error); }
     } catch (error) { alert("Network error."); } finally { setIsSubmitting(false); }
   };
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    if (!currentTenantId || !adminToken) return;
     setIsSubmitting(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${editingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${editingId}`, {
         method: 'PUT', 
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify(editFormData)
       });
       const data = await response.json();
@@ -245,12 +319,17 @@ export default function Contractors() {
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
+    if (!currentTenantId || !adminToken) return;
     setIsSubmitting(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/users/${passwordModalUser.id}/password`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${passwordModalUser.id}/password`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ newPassword })
       });
       const data = await response.json();
@@ -271,7 +350,7 @@ export default function Contractors() {
   const exportToCSV = () => {
     const headers = ['First Name', 'Last Name', 'Email', 'Role', 'Status', 'Visa', 'Vendor', 'Contract Type'];
     const csvData = processedContractors.map(c => [
-        c.first_name, c.last_name, c.email, c.role || 'N/A', c.is_active !== false ? 'Active' : 'Inactive', c.visa_status || 'N/A', c.vendor_name || 'N/A', c.contract_type || 'W2'
+        c.first_name || '', c.last_name || '', c.email || '', c.role || 'N/A', c.is_active !== false ? 'Active' : 'Inactive', c.visa_status || 'N/A', c.vendor_name || 'N/A', c.contract_type || 'W2'
     ]);
     const csvContent = [headers.join(','), ...csvData.map(row => row.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -303,13 +382,14 @@ export default function Contractors() {
 
   // --- Filtering & Sorting ---
   let processedContractors = contractors.filter(user => {
+    if (!user) return false;
     if (user.role === 'ADMIN' || user.email === 'admin@leodoesit.com') return false; 
     const isArchived = user.is_deleted === true;
     if (showArchive && !isArchived) return false; 
     if (!showArchive && isArchived) return false; 
 
     // Search Bar Filter
-    const searchString = `${user.first_name} ${user.last_name} ${user.email} ${user.vendor_name || ''}`.toLowerCase();
+    const searchString = `${user.first_name || ''} ${user.last_name || ''} ${user.email || ''} ${user.vendor_name || ''}`.toLowerCase();
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
 
     // Checkbox Filters
@@ -339,7 +419,7 @@ export default function Contractors() {
   const allVendors = Array.from(new Set(contractors.map(c => c.vendor_name || 'N/A').filter(v => v !== 'N/A'))).sort();
   const allVisas = ['US Citizen', 'Green Card', 'H1B', 'OPT', 'CPT', 'H4 EAD', 'N/A'];
 
-  const activeStats = contractors.filter(c => !c.is_deleted && c.role !== 'ADMIN' && !c.email.includes('admin@'));
+  const activeStats = contractors.filter(c => c && !c.is_deleted && c.role !== 'ADMIN' && !c.email?.includes('admin@'));
   const statTotalEmployees = activeStats.length;
   const statW2 = activeStats.filter(c => c.contract_type === 'W2' || !c.contract_type).length; 
   const statC2C = activeStats.filter(c => c.contract_type === 'C2C').length;
@@ -348,7 +428,7 @@ export default function Contractors() {
   return (
     <div style={{ backgroundColor: '#F3F4F6', minHeight: '100vh', padding: '20px', fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box', width: '100%' }}>
       
-      {/* 1. Top Action Bar: Custom class to bundle layout triggers */}
+      {/* 1. Top Action Bar */}
       <div className="responsive-header" style={styles.header}>
         <div>
           <h1 style={styles.title}>{showArchive ? '📦 Archived Records' : 'Team Roster'}</h1>
@@ -428,13 +508,13 @@ export default function Contractors() {
                 onClick={() => { setSelectedContracts([]); setSelectedVisas([]); setSelectedVendors([]); }}
                 style={{ backgroundColor: '#F3F4F6', border: '1px solid #D1D5DB', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', cursor: 'pointer', fontWeight: 'bold', color: '#4B5563', width: '100%', marginTop: '10px' }}
              >
-               Clear Filters
+                Clear Filters
              </button>
           </div>
         </div>
       )}
 
-      {/* 2. Vibrant KPI Cards wrapped with grid classes */}
+      {/* 2. KPI Cards */}
       {!showArchive && (
         <div className="dashboard-content" style={{ marginBottom: '30px' }}>
           <div style={styles.kpiGrid}>
@@ -462,10 +542,12 @@ export default function Contractors() {
         </div>
       )}
 
-      {/* 3. Main Modern Table container using fluid wraps */}
+      {/* 3. Main Modern Table */}
       <div className="billing-card" style={styles.tableCardContainer}>
         {loading ? (
           <p style={{ padding: '20px' }}>Loading team...</p>
+        ) : (!currentTenantId || currentTenantId === 'undefined') ? (
+          <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework context. Re-authenticating...</p>
         ) : processedContractors.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>
              <div style={{ fontSize: '30px', marginBottom: '10px' }}>🕵️</div>
@@ -547,7 +629,6 @@ export default function Contractors() {
               </table>
             </div>
 
-            {/* Pagination Grid Row */}
             {totalPages > 1 && (
               <div style={styles.pagination}>
                 <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} style={styles.pageBtn}>Previous</button>
@@ -558,10 +639,6 @@ export default function Contractors() {
           </>
         )}
       </div>
-
-      {/* ========================================= */}
-      {/* 4. MODALS (Responsive Overlaid Blocks) */}
-      {/* ========================================= */}
 
       {/* --- ADD EMPLOYEE MODAL --- */}
       {isAddModalOpen && (
@@ -804,9 +881,9 @@ export default function Contractors() {
       {viewingUser && (
         <div style={styles.modalOverlay}>
           <div style={styles.largeModalBox}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #E5E7EB', position: 'relative', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #E5E7EB', position: 'relative', flexWrap: 'wrap', width: '100%' }}>
               <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#6366F1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold' }}>
-                {viewingUser.first_name[0]}{viewingUser.last_name[0]}
+                {viewingUser.first_name ? viewingUser.first_name[0] : ''}{viewingUser.last_name ? viewingUser.last_name[0] : ''}
               </div>
               <div>
                 <h2 style={{ margin: 0, color: '#111827', fontSize: '20px' }}>{viewingUser.first_name} {viewingUser.last_name}</h2>

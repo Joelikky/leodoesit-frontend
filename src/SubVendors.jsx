@@ -1,8 +1,29 @@
 import React, { useState, useEffect } from 'react';
+// 🔥 FIX 1: Import the shared structural context hook
+import { useOutletContext } from 'react-router-dom';
 
 export default function SubVendors() {
+  // 🔥 FIX 2: Safely extract parent layout context variable headers with a backup empty object fallback
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: If structural context loops lag on a hard browser refresh, fetch credentials from sessionStorage
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`) || sessionStorage.getItem('leodoesit_user');
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
+  }
+
+  const currentTenantId = adminUser?.tenant_id;
+
   const [subVendors, setSubVendors] = useState([]);
-  const [invoices, setInvoices] = useState([]); // 🔥 NEW: Fetching invoices for the Stats math
+  const [invoices, setInvoices] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -10,7 +31,7 @@ export default function SubVendors() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [viewingSV, setViewingSV] = useState(null); 
-  const [insightData, setInsightData] = useState(null); // 🔥 NEW: State for the Stats Dashboard
+  const [insightData, setInsightData] = useState(null); 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const initialFormState = { 
@@ -20,18 +41,33 @@ export default function SubVendors() {
   const [editFormData, setEditFormData] = useState({});
 
   useEffect(() => {
-    fetchSubVendors();
-    fetchInvoices(); // 🔥 NEW: Call invoices on load
-  }, []);
+    // 🔥 FIX 3: Robust Multi-Tenant framework frame guard interceptor
+    if (
+      !currentTenantId || 
+      currentTenantId === 'undefined' || 
+      currentTenantId === 'null' || 
+      !adminToken
+    ) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchSubVendors = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+    fetchSubVendors(currentTenantId, adminToken);
+    fetchInvoices(currentTenantId, adminToken); 
+  }, [currentTenantId, adminToken]);
+
+  const fetchSubVendors = async (tenantId, token) => {
+    setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors`, {
-      headers: { 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sub_vendors`, {
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      if (data.success) setSubVendors(data.data);
+      if (data.success) setSubVendors(data.data || []);
     } catch (error) {
       console.error("Failed to fetch sub vendors:", error);
     } finally {
@@ -39,27 +75,36 @@ export default function SubVendors() {
     }
   };
 
-  // 🔥 NEW: Fetch Invoices Function
-  const fetchInvoices = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const fetchInvoices = async (tenantId, token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
-      headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices`, {
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const data = await response.json();
-      if (data.success) setInvoices(data.data);
-    } catch (error) { console.error("Failed to fetch invoices:", error); }
+      if (data.success) setInvoices(data.data || []);
+    } catch (error) { 
+      console.error("Failed to fetch invoices:", error); 
+    }
   };
 
   const handleToggleStatus = async (sv) => {
+    if (!currentTenantId || !adminToken) return;
     const newStatus = (sv.status === 'Active' || !sv.status) ? 'Inactive' : 'Active';
     
     setSubVendors(subVendors.map(item => item.id === sv.id ? { ...item, status: newStatus } : item));
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors/${sv.id}`, {
-      method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sub_vendors/${sv.id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ ...sv, status: newStatus })
       });
       const data = await response.json();
@@ -74,18 +119,15 @@ export default function SubVendors() {
     }
   };
 
-  // 🔥 NEW: Math logic for the Sub Vendor Stats Dashboard
   const openInsights = (sv) => {
-    setViewingSV(null); // Close view modal if open
+    setViewingSV(null); 
     
-    // Find all invoices associated with this sub vendor
     const svInvoices = invoices.filter(inv => 
       (inv.c2c_name && inv.c2c_name.toLowerCase() === sv.company_name.toLowerCase()) ||
       (inv.vendor_name && inv.vendor_name.toLowerCase() === sv.company_name.toLowerCase()) ||
       (inv.client_name && inv.client_name.toLowerCase() === sv.company_name.toLowerCase())
     );
     
-    // Calculate totals
     const totalBilled = svInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount_invoiced || inv.total_amount || 0), 0);
     const totalPaid = svInvoices.filter(inv => inv.status === 'PAID').reduce((sum, inv) => sum + parseFloat(inv.amount_invoiced || inv.total_amount || 0), 0);
 
@@ -122,19 +164,23 @@ export default function SubVendors() {
 
   const handleAddSubmit = async (e) => {
     e.preventDefault();
+    if (!currentTenantId || !adminToken) return;
     setIsSubmitting(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sub_vendors`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, tenant_id: admin?.tenant_id })
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
+        body: JSON.stringify({ ...formData, tenant_id: currentTenantId })
       });
       const data = await response.json();
       
       if (data.success) {
-        fetchSubVendors();
+        fetchSubVendors(currentTenantId, adminToken);
         setIsAddModalOpen(false);
         setFormData(initialFormState);
       } else {
@@ -149,11 +195,17 @@ export default function SubVendors() {
 
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    if (!currentTenantId || !adminToken) return;
     setIsSubmitting(true);
+    
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/sub_vendors/${editingId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/sub_vendors/${editingId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify(editFormData)
       });
       const data = await response.json();
@@ -173,7 +225,7 @@ export default function SubVendors() {
   const exportToCSV = () => {
     const headers = ['Company Name', 'Billing Email', 'Phone Number', 'Net Terms', 'Status', 'Address'];
     const csvData = subVendors.map(sv => [
-      sv.company_name, 
+      sv.company_name || '', 
       sv.billing_email || '', 
       sv.billing_phone || '',
       sv.net_terms || '',
@@ -191,7 +243,8 @@ export default function SubVendors() {
   };
 
   const filteredList = subVendors.filter(sv => {
-    const searchString = `${sv.company_name} ${sv.billing_email}`.toLowerCase();
+    if (!sv) return false;
+    const searchString = `${sv.company_name || ''} ${sv.billing_email || ''}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   });
 
@@ -227,6 +280,8 @@ export default function SubVendors() {
       <div style={styles.tableContainer}>
         {loading ? (
           <p style={{ padding: '20px' }}>Loading Sub Vendors...</p>
+        ) : (!currentTenantId || currentTenantId === 'undefined') ? (
+          <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework context. Re-authenticating...</p>
         ) : filteredList.length === 0 ? (
           <p style={{ padding: '20px', color: '#6B7280', fontStyle: 'italic' }}>No Sub Vendors found.</p>
         ) : (
@@ -267,7 +322,6 @@ export default function SubVendors() {
                     </span>
                   </td>
                   <td style={{...styles.td, textAlign: 'center'}}>
-                    {/* 🔥 UPDATED: This button now triggers the dashboard! */}
                     <button onClick={() => openInsights(sv)} style={styles.insightBtn}>📊 Stats</button>
                     <button 
                       onClick={() => {
@@ -423,32 +477,23 @@ const styles = {
   exportBtn: { backgroundColor: '#1F2937', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
   addPrimaryBtn: { backgroundColor: '#4F46E5', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' },
   searchInput: { padding: '10px 15px', borderRadius: '8px', border: '1px solid #D1D5DB', width: '220px', fontSize: '15px' },
-  
   tableContainer: { backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
   tableHead: { backgroundColor: '#F9FAFB', borderBottom: '1px solid #E5E7EB' },
   th: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px' },
-  
   tableRow: { borderBottom: '1px solid #E5E7EB', transition: 'background-color 0.2s', backgroundColor: 'white' },
   td: { padding: '15px 20px', color: '#4B5563', fontSize: '15px' },
-  
   clickableName: { color: '#4F46E5', cursor: 'pointer', fontWeight: 'bold', textDecoration: 'underline', textUnderlineOffset: '2px' },
-
   badgeActive: { backgroundColor: '#D1FAE5', color: '#047857', padding: '4px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 'bold', transition: '0.2s' },
   badgeInactive: { backgroundColor: '#F3F4F6', color: '#6B7280', padding: '4px 12px', borderRadius: '12px', fontSize: '13px', fontWeight: 'bold', transition: '0.2s' },
-  
   insightBtn: { backgroundColor: '#F0FDF4', color: '#15803D', border: '1px solid #BBF7D0', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
   editBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', marginLeft: '5px' },
-  
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '450px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' },
   closeBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9CA3AF' },
   input: { padding: '12px 15px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '15px', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  
   saveBtn: { backgroundColor: '#10B981', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
   cancelBtn: { backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' },
-
-  // 🔥 NEW STYLES for the Dashboard
   statsGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' },
   statBox: { backgroundColor: '#F9FAFB', padding: '15px', borderRadius: '8px', border: '1px solid #E5E7EB' },
   statLabel: { margin: 0, fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', fontWeight: 'bold' },

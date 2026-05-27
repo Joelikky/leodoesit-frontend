@@ -31,8 +31,13 @@ export default function AdminLayout() {
   const queryParams = new URLSearchParams(location.search);
   const currentUid = queryParams.get('uid');
   
-  // 🔥 FIX 1: Generate an appendable query string suffix to protect navigation parameters
+  // Generate an appendable query string suffix to protect navigation parameters
   const appendUid = currentUid ? `?uid=${currentUid}` : '';
+
+  // Parse authorization parameters up front for the Outlet context channel distribution
+  const adminUserString = sessionStorage.getItem(`user_${currentUid}`);
+  const adminUser = adminUserString ? JSON.parse(adminUserString) : null;
+  const adminToken = sessionStorage.getItem(`token_${currentUid}`);
 
   useEffect(() => {
     // Read the tracking parameter explicitly
@@ -42,16 +47,13 @@ export default function AdminLayout() {
       return;
     }
 
-    // Access dynamic cache key matching Login context
-    const userString = sessionStorage.getItem(`user_${currentUid}`);
-    
-    if (!userString) {
+    if (!adminUserString) {
       console.error("No active user session found matching tracking token.");
       navigate('/');
       return;
     }
 
-    const user = JSON.parse(userString);
+    const user = JSON.parse(adminUserString);
     if (user.role !== 'ADMIN') {
       alert("Unauthorized access. Admins only.");
       sessionStorage.removeItem(`user_${currentUid}`);
@@ -75,7 +77,7 @@ export default function AdminLayout() {
       }
     }
 
-  }, [navigate, currentUid]); // Sync on tracking state parameter shifts
+  }, [navigate, currentUid, adminUserString]); // Sync on tracking state parameter shifts
 
   const handleLogout = () => {
     if (currentUid) {
@@ -108,7 +110,7 @@ export default function AdminLayout() {
           </div>
         </div>
         
-        {/* 🔥 FIX 2: Append the tracked UID query wrapper token to all Link endpoints */}
+        {/* Append the tracked UID query wrapper token to all Link endpoints */}
         <nav style={styles.nav}>
           <Link to={`/admin/queue${appendUid}`} style={path.includes('/queue') ? styles.activeNavItem : styles.navItem}>
             📋 Approval Queue
@@ -145,7 +147,8 @@ export default function AdminLayout() {
 
       {/* Main Inner Target Context View Window */}
       <div style={styles.main}>
-        <Outlet /> 
+        {/* Inject authenticated framework properties safely to child elements via context */}
+        <Outlet context={{ adminUser, adminToken }} /> 
       </div>
     </div>
   );

@@ -94,7 +94,7 @@ export default function Portal() {
       }
     }
   
-    // 🛡️ SUBtle LAYOUT FIX: Intercept malformed string conversions before dispatching
+    // 🛡️ FRONTEND GUARDRAIL: Intercept malformed string conversions before dispatching
     if (currentUser.tenant_id && currentUser.tenant_id !== 'undefined' && currentUser.tenant_id !== 'null') {
       fetchMyTimesheets(currentUser.email, currentUser.tenant_id, urlUid);
     } else {
@@ -128,7 +128,8 @@ export default function Portal() {
         {
           headers: {
             'x-tenant-id': tenantId,
-            'Authorization': `Bearer ${userSpecificToken}`
+            'Authorization': `Bearer ${userSpecificToken}`,
+            'Content-Type': 'application/json'
           }
         }
       );

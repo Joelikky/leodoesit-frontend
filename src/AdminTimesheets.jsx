@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// 🔥 FIX 1: Import the shared structural context hook
+import { useOutletContext } from 'react-router-dom';
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June", 
@@ -6,6 +8,25 @@ const MONTHS = [
 ];
 
 export default function AdminTimesheets() {
+  // 🔥 FIX 2: Safely extract parent layout context variables with an empty object fallback
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: If context loops lag on hard refresh, read keys from sessionStorage
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`) || sessionStorage.getItem('leodoesit_user');
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
+  }
+
+  const currentTenantId = adminUser?.tenant_id;
+
   const [contractors, setContractors] = useState([]);
   const [allTimesheets, setAllTimesheets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,41 +42,49 @@ export default function AdminTimesheets() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Track the tenant ID locally to manage clean re-fetches if state delays
-  const adminUser = JSON.parse(localStorage.getItem('leodoesit_user'));
-  const currentTenantId = adminUser?.tenant_id;
-
   useEffect(() => {
-    // 🛡️ FRONTEND GUARDRAIL: Do not fetch if the UUID context is not ready yet
-    if (!currentTenantId || currentTenantId === 'undefined' || currentTenantId === 'null') {
+    // 🔥 FIX 3: Robust Multi-Tenant framework framework guard line
+    if (
+      !currentTenantId || 
+      currentTenantId === 'undefined' || 
+      currentTenantId === 'null' || 
+      !adminToken
+    ) {
       setLoading(false);
       return; 
     }
     
-    fetchData(currentTenantId);
-  }, [currentTenantId]); // Refetches smoothly if tenant context takes a moment to stabilize
+    fetchData(currentTenantId, adminToken);
+  }, [currentTenantId, adminToken]);
 
-  const fetchData = async (tenantId) => {
+  const fetchData = async (tenantId, token) => {
     setLoading(true);
     try {
       // 1. Fetch all active contractors
       const userRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const userData = await userRes.json();
       
       // 2. Fetch all timesheets
       const tsRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': tenantId }
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
+        }
       });
       const tsData = await tsRes.json();
 
       if (userData.success) {
-        // Filter out admins to only track real contractors
-        setContractors(userData.data.filter(u => u.role !== 'ADMIN' && u.is_active !== false && !u.is_deleted));
+        setContractors((userData.data || []).filter(u => u.role !== 'ADMIN' && u.is_active !== false && !u.is_deleted));
       }
       if (tsData.success) {
-        setAllTimesheets(tsData.data);
+        setAllTimesheets(tsData.data || []);
       }
     } catch (error) {
       console.error("Error fetching timesheet data:", error);
@@ -64,12 +93,16 @@ export default function AdminTimesheets() {
     }
   };
 
-  // 🔥 THE MASTER ENGINE: Cross-reference contractors with timesheets for the selected month
+  // Cross-reference contractors with timesheets for the selected month
   const buildMasterList = () => {
-    return contractors.map(contractor => {
-      const submittedSheet = allTimesheets.find(ts => {
+    const safeContractors = Array.isArray(contractors) ? contractors : [];
+    const safeTimesheets = Array.isArray(allTimesheets) ? allTimesheets : [];
+
+    return safeContractors.map(contractor => {
+      const submittedSheet = safeTimesheets.find(ts => {
         if (!ts.period_start || ts.user_id !== contractor.id) return false;
         const tsDate = new Date(ts.period_start);
+        if (isNaN(tsDate.getTime())) return false;
         return tsDate.getMonth() === parseInt(viewMonth) && tsDate.getFullYear() === parseInt(viewYear);
       });
 
@@ -85,7 +118,8 @@ export default function AdminTimesheets() {
 
   // Apply Search and Status Filters
   const filteredList = masterList.filter(item => {
-    const matchesSearch = `${item.first_name} ${item.last_name} ${item.email}`.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchString = `${item.first_name || ''} ${item.last_name || ''} ${item.email || ''}`.toLowerCase();
+    const matchesSearch = searchString.includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -102,6 +136,7 @@ export default function AdminTimesheets() {
   // --- ACTION HANDLERS ---
   
   const handleUpdateStatus = async (timesheetId, newStatus) => {
+    if (!currentTenantId || !adminToken) return;
     if (newStatus === 'REJECTED' && !rejectionReason.trim()) {
       alert("Please provide a reason for rejection so the contractor can fix it.");
       return;
@@ -111,7 +146,11 @@ export default function AdminTimesheets() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${timesheetId}/status`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': currentTenantId },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ status: newStatus, admin_notes: rejectionReason })
       });
       const data = await response.json();
@@ -120,7 +159,7 @@ export default function AdminTimesheets() {
         alert(`Timesheet marked as ${newStatus}`);
         setReviewingTimesheet(null);
         setRejectionReason('');
-        fetchData(currentTenantId); // Pass tenant context explicitly on refresh
+        fetchData(currentTenantId, adminToken); 
       } else {
         alert("Failed to update status: " + data.error);
       }
@@ -132,12 +171,17 @@ export default function AdminTimesheets() {
   };
 
   const handleRemind = async (contractor) => {
+    if (!currentTenantId || !adminToken) return;
     const monthName = MONTHS[viewMonth];
 
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/remind`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': currentTenantId },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ 
           email: contractor.email, 
           first_name: contractor.first_name,
@@ -232,7 +276,7 @@ export default function AdminTimesheets() {
         {loading ? (
           <p style={{ padding: '30px', textAlign: 'center' }}>Loading timesheet data...</p>
         ) : (!currentTenantId || currentTenantId === 'undefined') ? (
-          <p style={{ padding: '30px', textAlign: 'center', color: '#DC2626' }}>⚠️ Missing workspace verification headers. Please log out and re-authenticate.</p>
+          <p style={{ padding: '30px', textAlign: 'center', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework context. Re-authenticating...</p>
         ) : filteredList.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{ fontSize: '30px', marginBottom: '10px' }}>🕵️</div>
@@ -299,7 +343,7 @@ export default function AdminTimesheets() {
       </div>
 
       {/* --- REVIEW MODAL --- */}
-      {reviewingTimesheet && (
+      {reviewingTimesheet && reviewingTimesheet.timesheet && (
         <div style={styles.modalOverlay}>
           <div style={styles.modalBox}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #E5E7EB', paddingBottom: '15px' }}>
@@ -321,9 +365,18 @@ export default function AdminTimesheets() {
 
             <div style={{ marginBottom: '20px' }}>
                <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>Proof of Work Attachments</h4>
-               <div style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '10px', borderRadius: '6px', fontSize: '13px', textAlign: 'center', border: '1px dashed #BFDBFE' }}>
-                 Attachment viewing area. (Map your fetched files here).
-               </div>
+               {reviewingTimesheet.timesheet.screenshot_urls && reviewingTimesheet.timesheet.screenshot_urls.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '10px' }}>
+                    {reviewingTimesheet.timesheet.screenshot_urls.map((url, i) => (
+                      <a key={i} href={url} target="_blank" rel="noreferrer" style={{ display: 'block', border: '1px solid #E5E7EB', borderRadius: '6px', overflow: 'hidden' }}>
+                        <div style={{ height: '80px', backgroundColor: '#F3F4F6', backgroundImage: `url('${url}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                        <div style={{ padding: '4px', fontSize: '11px', color: '#4B5563', textAlign: 'center', backgroundColor: 'white' }}>Image {i+1}</div>
+                      </a>
+                    ))}
+                  </div>
+               ) : (
+                  <p style={{ color: '#9CA3AF', fontStyle: 'italic', fontSize: '13px' }}>No attachments uploaded.</p>
+               )}
             </div>
 
             {reviewingTimesheet.status === 'SUBMITTED' || reviewingTimesheet.status === 'PENDING' ? (
@@ -365,7 +418,7 @@ const styles = {
   title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0', fontWeight: '700' },
   subtitle: { color: '#6B7280', margin: 0, fontSize: '14px' },
   
-  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '30px' },
+  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '30px' },
   kpiCard: { backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' },
   kpiLabel: { margin: 0, fontSize: '12px', color: '#6B7280', textTransform: 'uppercase', fontWeight: 'bold' },
   kpiValue: { margin: '10px 0 0 0', fontSize: '32px', color: '#111827' },

@@ -1,6 +1,31 @@
 import { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
+
+const MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+];
 
 export default function InvoiceLedger() {
+  // 🔥 FIX 1: Extract credentials safely from parent layout context
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: Pull context keys straight from sessionStorage if context lags
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`) || sessionStorage.getItem('leodoesit_user');
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
+  }
+
+  const currentTenantId = adminUser?.tenant_id;
+
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,29 +51,32 @@ export default function InvoiceLedger() {
   const [tempMuteCheck, setTempMuteCheck] = useState(false);
 
   useEffect(() => {
-    fetchInvoices();
-  }, []);
+    // 🔥 FIX 2: Guard execution against uninitialized string layouts
+    if (
+      !currentTenantId || 
+      currentTenantId === 'undefined' || 
+      currentTenantId === 'null' || 
+      !adminToken
+    ) {
+      setLoading(false);
+      return;
+    }
+
+    fetchInvoices(currentTenantId, adminToken);
+  }, [currentTenantId, adminToken]);
 
   useEffect(() => {
     setCurrentPage(1);
     setSelectedInvoices([]); 
   }, [searchTerm, activeTab, filterMonth, filterYear, filterVendor]);
 
-  // 🛠️ STEP 3 FIX: Extract token using uid query parameter context
-  const fetchInvoices = async () => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const urlUid = queryParams.get('uid');
-
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
-    const targetUid = urlUid || admin?.id;
-    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
-
+  const fetchInvoices = async (tenantId, token) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices`, {
         headers: { 
           'Content-Type': 'application/json', 
-          'x-tenant-id': admin?.tenant_id,
-          'Authorization': `Bearer ${userSpecificToken}`
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();
@@ -56,25 +84,22 @@ export default function InvoiceLedger() {
     } catch (error) { 
       console.error("Error fetching invoices:", error); 
       setInvoices([]); 
-    } 
-    finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
-  // 🛠️ STEP 3 FIX: Update background mutations to route authorization tags cleanly
   const runApiAction = async (url, method, bodyData = null) => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const urlUid = queryParams.get('uid');
-
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
-    const targetUid = urlUid || admin?.id;
-    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+    if (!currentTenantId || !adminToken) {
+      throw new Error("Missing active multi-tenant authorization credentials.");
+    }
 
     const options = {
       method,
       headers: { 
         'Content-Type': 'application/json', 
-        'x-tenant-id': admin?.tenant_id,
-        'Authorization': `Bearer ${userSpecificToken}`
+        'x-tenant-id': currentTenantId,
+        'Authorization': `Bearer ${adminToken}`
       }
     };
     if (bodyData) options.body = JSON.stringify(bodyData);
@@ -128,10 +153,10 @@ export default function InvoiceLedger() {
       for (let i = 0; i < targets.length; i++) {
         let id = targets[i];
         let res; 
-        if (action === 'EMAIL') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/send`, 'POST');        
-        if (action === 'PAY') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/pay`, 'PUT', { payment_amount: paymentAmount ? parseFloat(paymentAmount) : null });
-        if (action === 'VOID') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/void`, 'PUT');
-        if (action === 'REMIND') res = await runApiAction(`${import.meta.env.VITE_API_URL}/api/invoices/${id}/remind`, 'POST');
+        if (action === 'EMAIL') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/send`, 'POST');        
+        if (action === 'PAY') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/pay`, 'PUT', { payment_amount: paymentAmount ? parseFloat(paymentAmount) : null });
+        if (action === 'VOID') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/void`, 'PUT');
+        if (action === 'REMIND') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/remind`, 'POST');
         
         if (res && !res.success) {
            alert(`❌ Action Failed: ${res.error}`);
@@ -152,7 +177,7 @@ export default function InvoiceLedger() {
          }
       }
       
-      fetchInvoices(); 
+      fetchInvoices(currentTenantId, adminToken); 
     } catch (error) {
       console.error(error);
       alert("❌ A background error occurred. Please refresh.");
@@ -161,12 +186,15 @@ export default function InvoiceLedger() {
 
   const downloadPDF = (e, invoice) => {
     e.stopPropagation(); 
-    window.open(`${import.meta.env.VITE_API_URL}/api/invoices/${invoice.id}/download`, '_blank');  };
+    if (!adminToken || !currentTenantId) return;
+    window.open(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${invoice.id}/download?token=${adminToken}&tenant_id=${currentTenantId}`, '_blank');
+  };
 
   // 🔥 1. THE MASTER FILTER PIPELINE
   const safeInvoices = Array.isArray(invoices) ? invoices : [];
   
   const fullyFilteredInvoices = safeInvoices.filter(inv => {
+    if (!inv) return false;
     let matchDate = true;
     if (filterMonth !== 'ALL' || filterYear !== 'ALL') {
        const invDate = inv.due_date ? new Date(inv.due_date) : new Date();
@@ -338,6 +366,8 @@ export default function InvoiceLedger() {
 
         {loading ? (
           <p style={{ padding: '20px' }}>Loading ledger...</p>
+        ) : (!currentTenantId || currentTenantId === 'undefined') ? (
+          <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework context. Re-authenticating...</p>
         ) : tableInvoices.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <div style={{ fontSize: '30px', marginBottom: '10px' }}>📊</div>
@@ -446,7 +476,7 @@ export default function InvoiceLedger() {
                     const isOver = bal < 0;
                     return (
                       <>
-                        <span style={{ fontSize: '12px', color: '#6B7280' }}>{isOver ? 'Credit Issued' : 'Balance Due'}</span>
+                        <span style={{ Sign: '12px', color: '#6B7280' }}>{isOver ? 'Credit Issued' : 'Balance Due'}</span>
                         <div style={{ fontWeight: 'bold', color: isOver ? '#7C3AED' : '#DC2626' }}>
                           {isOver ? '+' : ''}${Math.abs(bal).toFixed(2)}
                         </div>
@@ -485,7 +515,6 @@ export default function InvoiceLedger() {
           </div>
         </div>
       )}
-
     </div>
   );
 }

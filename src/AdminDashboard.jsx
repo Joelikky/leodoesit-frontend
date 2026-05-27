@@ -226,7 +226,7 @@ export default function AdminDashboard() {
   if (viewMode === 'HISTORY') {
     filteredList = filteredList.filter(ts => {
       if (filterMonth === 'ALL' && filterYear === 'ALL') return true;
-      if (!ts.period_start) return false; // Guard against malformed historical entries
+      if (!ts.period_start) return false; 
       
       const tsDate = new Date(ts.period_start);
       if (isNaN(tsDate.getTime())) return false;
@@ -505,20 +505,23 @@ export default function AdminDashboard() {
 
             <div style={styles.modalReceipt}>
               <div style={{ maxHeight: '150px', overflowY: 'auto', paddingRight: '5px' }}>
-                {targetTimesheets.map(ts => (
-                  <div key={ts.id} style={styles.receiptRow}>
-                    <div>
-                      <span style={{ fontWeight: 'bold', color: '#111827' }}>{ts.first_name} {ts.last_name}</span>
-                      <br/>
-                      <span style={{ color: '#6B7280', fontSize: '13px' }}>
-                        {new Date(ts.period_start || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })}
-                      </span>
+                {targetTimesheets.map(ts => {
+                  const receiptStart = ts?.period_start || new Date().toISOString();
+                  return (
+                    <div key={ts.id || Math.random()} style={styles.receiptRow}>
+                      <div>
+                        <span style={{ fontWeight: 'bold', color: '#111827' }}>{ts.first_name || 'N/A'} {ts.last_name || ''}</span>
+                        <br/>
+                        <span style={{ color: '#6B7280', fontSize: '13px' }}>
+                          {new Date(receiptStart).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end || receiptStart).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                        </span>
+                      </div>
+                      <div style={{ fontWeight: 'bold', color: '#111827' }}>
+                        {parseFloat(ts.total_hours || 0).toFixed(2)} hrs
+                      </div>
                     </div>
-                    <div style={{ fontWeight: 'bold', color: '#111827' }}>
-                      {parseFloat(ts.total_hours || 0).toFixed(2)} hrs
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

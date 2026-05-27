@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 
 const MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
@@ -7,6 +7,25 @@ const MONTHS = [
 ];
 
 export default function InvoicingHub() {
+  // 🔥 FIX 1: Safely extract context variables with an empty object fallback
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: Extract credentials from sessionStorage if context loops refresh
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`) || sessionStorage.getItem('leodoesit_user');
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
+  }
+
+  const currentTenantId = adminUser?.tenant_id;
+
   const [timesheets, setTimesheets] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,43 +49,51 @@ export default function InvoicingHub() {
 
   const navigate = useNavigate();
 
-  // 🛡️ Safe Context Parsing Hook Configuration
-  const adminUser = JSON.parse(localStorage.getItem('leodoesit_user'));
-  const currentTenantId = adminUser?.tenant_id;
-
   useEffect(() => {
-    // 🛡️ FRONTEND GUARDRAIL: Immediately abort fetch sequences if workspace markers are uninitialized
-    if (!currentTenantId || currentTenantId === 'undefined' || currentTenantId === 'null') {
+    // 🔥 FIX 2: Multi-tenant safety sentinel shield
+    if (
+      !currentTenantId || 
+      currentTenantId === 'undefined' || 
+      currentTenantId === 'null' || 
+      !adminToken
+    ) {
       setLoading(false);
       return;
     }
     
-    fetchHubData(currentTenantId);
-  }, [currentTenantId]); // Gracefully tracks state stabilization
+    fetchHubData(currentTenantId, adminToken);
+  }, [currentTenantId, adminToken]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterMonth, filterYear]);
 
-  const fetchHubData = async (tenantId) => {
-    if (!tenantId || tenantId === 'undefined') return;
+  const fetchHubData = async (tenantId, token) => {
     setLoading(true);
     try {
       const [tsResponse, clientsResponse] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL}/api/timesheets?status=APPROVED`,  {
-          headers: { 'x-tenant-id': tenantId } 
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets?status=APPROVED`,  {
+          headers: { 
+            'x-tenant-id': tenantId,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
         }),
-        fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
-          headers: { 'x-tenant-id': tenantId } 
+        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/clients`, {
+          headers: { 
+            'x-tenant-id': tenantId,
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } 
         })
       ]);
       
       const tsData = await tsResponse.json();
       const clientsData = await clientsResponse.json();
       
-      if (tsData.success) setTimesheets(tsData.data);
+      if (tsData.success) setTimesheets(tsData.data || []);
       if (clientsData.success) {
-        setClients(clientsData.data.filter(c => c.is_active !== false));
+        setClients((clientsData.data || []).filter(c => c.is_active !== false));
       }
     } catch (error) {
       console.error("Error fetching hub data:", error);
@@ -88,11 +115,16 @@ export default function InvoicingHub() {
   };
 
   const executeGenerateInvoice = async (timesheetId, clientId) => {
+    if (!currentTenantId || !adminToken) return;
     setIsProcessing(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
+        },
         body: JSON.stringify({ 
           timesheet_id: timesheetId, 
           client_id: clientId,
@@ -116,13 +148,15 @@ export default function InvoicingHub() {
   };
 
   const executeVoidTimesheet = async (timesheetId) => {
+    if (!currentTenantId || !adminToken) return;
     setIsProcessing(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${timesheetId}/void`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${timesheetId}/void`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          'x-tenant-id': currentTenantId 
+          'x-tenant-id': currentTenantId,
+          'Authorization': `Bearer ${adminToken}`
         }
       });
       
@@ -158,7 +192,8 @@ export default function InvoicingHub() {
 
   // --- LOGIC ENGINE ---
   let processedTimesheets = timesheets.filter(ts => {
-    const searchString = `${ts.first_name} ${ts.last_name}`.toLowerCase();
+    if (!ts) return false;
+    const searchString = `${ts.first_name || ''} ${ts.last_name || ''}`.toLowerCase();
     const matchesSearch = searchString.includes(searchTerm.toLowerCase());
 
     let matchesMonth = true;
@@ -166,7 +201,7 @@ export default function InvoicingHub() {
 
     if (filterMonth !== 'ALL' || filterYear !== 'ALL') {
       const tsDate = ts.period_start ? new Date(ts.period_start) : null;
-      if (tsDate) {
+      if (tsDate && !isNaN(tsDate.getTime())) {
         const tsMonth = String(tsDate.getMonth() + 1).padStart(2, '0');
         const tsYear = String(tsDate.getFullYear());
         
@@ -209,6 +244,9 @@ export default function InvoicingHub() {
   const currentItems = processedTimesheets.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const targetTimesheet = modalConfig.isOpen ? timesheets.find(ts => ts.id === modalConfig.targetId) : null;
+
+  // Re-generate current tracking url parameter suffix context safely
+  const appendUid = currentUid ? `?uid=${currentUid}` : '';
 
   return (
     <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
@@ -258,13 +296,13 @@ export default function InvoicingHub() {
           {loading ? (
             <p style={{ padding: '20px' }}>Loading approved timesheets...</p>
           ) : (!currentTenantId || currentTenantId === 'undefined') ? (
-            <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization token layout header. Please re-authenticate.</p>
+            <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework context. Re-authenticating...</p>
           ) : processedTimesheets.length === 0 ? (
             <div style={styles.emptyState}>
               <div style={styles.emptyStateIcon}>🎉</div>
               <h3 style={{ margin: '10px 0 5px 0', color: '#111827' }}>You are all caught up!</h3>
               <p style={{ color: '#6B7280', marginBottom: '20px' }}>There are no approved timesheets waiting to be invoiced for this period.</p>
-              <button onClick={() => navigate('/admin/queue')} style={styles.queueBtn}>
+              <button onClick={() => navigate(`/admin/queue${appendUid}`)} style={styles.queueBtn}>
                 Check Approval Queue
               </button>
             </div>
@@ -302,12 +340,12 @@ export default function InvoicingHub() {
                      if (manualMappings[ts.id]) {
                         matchingClient = clients.find(c => c.id === parseInt(manualMappings[ts.id]));
                      } else {
-                        matchingClient = clients.find(c => c.company_name.trim().toLowerCase() === (ts.vendor_name || '').trim().toLowerCase());
+                        matchingClient = clients.find(c => c.company_name && c.company_name.trim().toLowerCase() === (ts.vendor_name || '').trim().toLowerCase());
                      }
                      
                      const isReady = !!matchingClient;
                      const tsDate = ts.period_start ? new Date(ts.period_start) : null;
-                     const periodText = tsDate ? `${MONTHS[tsDate.getMonth()]} ${tsDate.getFullYear()}` : 'N/A';
+                     const periodText = tsDate && !isNaN(tsDate.getTime()) ? `${MONTHS[tsDate.getMonth()]} ${tsDate.getFullYear()}` : 'N/A';
 
                       return (
                         <tr key={ts.id} style={styles.tableRow}>
