@@ -60,42 +60,117 @@ export default function Portal() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // 🛠️ STEP 4 FIX: Read user token routing context parameter directly from active URL structure
-    const queryParams = new URLSearchParams(window.location.search);
-    const urlUid = queryParams.get('uid');
 
-    const userString = sessionStorage.getItem('leodoesit_user');
-    if (!userString) {
+    // =========================
+    // GET ACTIVE UID FROM URL
+    // =========================
+  
+    const queryParams =
+      new URLSearchParams(window.location.search);
+  
+    const urlUid =
+      queryParams.get('uid');
+  
+    // =========================
+    // INVALID SESSION
+    // =========================
+  
+    if (!urlUid) {
+  
+      console.error("UID missing");
+  
       navigate('/');
+  
       return;
     }
-    
-    const currentUser = JSON.parse(userString);
+  
+    // =========================
+    // LOAD USER FOR THIS TAB
+    // =========================
+  
+    const userString =
+      sessionStorage.getItem(
+        `user_${urlUid}`
+      );
+  
+    // =========================
+    // USER NOT FOUND
+    // =========================
+  
+    if (!userString) {
+  
+      console.error("User session missing");
+  
+      navigate('/');
+  
+      return;
+    }
+  
+    // =========================
+    // PARSE USER
+    // =========================
+  
+    const currentUser =
+      JSON.parse(userString);
+  
     setUser(currentUser);
-
-    // DYNAMIC BRANDING & BROWSER TAB LOGIC
+  
+    // =========================
+    // DYNAMIC BRANDING
+    // =========================
+  
     if (currentUser.tenant_name) {
-      if (currentUser.tenant_name.toLowerCase() === 'gandiva') {
-        setCompanyName('Gandiva Insights');
-        setThemeColor('#4F46E5'); 
-        document.title = "Gandiva Portal"; 
-        changeBrowserIcon(giSymbol);       
+  
+      if (
+        currentUser.tenant_name
+          .toLowerCase()
+          .includes('gandiva')
+      ) {
+  
+        setCompanyName(
+          'Gandiva Insights'
+        );
+  
+        setThemeColor(
+          '#4F46E5'
+        );
+  
+        document.title =
+          "Gandiva Portal";
+  
+        changeBrowserIcon(
+          giSymbol
+        );
+  
       } else {
-        setCompanyName('Leodoes It');
-        setThemeColor('#10B981'); 
-        document.title = "Leodoes IT Portal"; 
-        changeBrowserIcon(ldiSymbol);         
+  
+        setCompanyName(
+          'Leodoes It'
+        );
+  
+        setThemeColor(
+          '#10B981'
+        );
+  
+        document.title =
+          "Leodoes IT Portal";
+  
+        changeBrowserIcon(
+          ldiSymbol
+        );
       }
     }
-
-    // 👇 FIX: Guard statement against 'undefined' or missing user string context keys
-    const targetUid = urlUid || currentUser?.id;
-    if (!targetUid || targetUid === 'undefined') {
-      console.error("Fetch halted: Valid User Identifier UID is missing.");
-      return;
-    }
-
-    fetchMyTimesheets(currentUser.email, currentUser.tenant_id, targetUid);
+  
+    // =========================
+    // FETCH USER DATA
+    // =========================
+  
+    fetchMyTimesheets(
+      currentUser.email,
+      currentUser.tenant_id,
+      urlUid
+    );
+  
   }, [navigate]);
 
   // 🛠️ STEP 4 FIX: Target user-keyed local token parameters safely inside fetch routing logic
@@ -263,14 +338,52 @@ export default function Portal() {
   };
 
   const handleLogout = () => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const targetUid = queryParams.get('uid') || user?.id;
 
-    sessionStorage.removeItem(`token_${targetUid}`);
-    sessionStorage.removeItem('leodoesit_user');
-    document.title = "Portal Login";
-    changeBrowserIcon('/vite.svg'); 
+    // =========================
+    // GET ACTIVE UID
+    // =========================
+  
+    const queryParams =
+      new URLSearchParams(window.location.search);
+  
+    const targetUid =
+      queryParams.get('uid') || user?.id;
+  
+    // =========================
+    // REMOVE TOKEN
+    // =========================
+  
+    sessionStorage.removeItem(
+      `token_${targetUid}`
+    );
+  
+    // =========================
+    // REMOVE USER
+    // =========================
+  
+    sessionStorage.removeItem(
+      `user_${targetUid}`
+    );
+  
+    // =========================
+    // RESET TITLE
+    // =========================
+  
+    document.title =
+      "Portal Login";
+  
+    // =========================
+    // RESET ICON
+    // =========================
+  
+    changeBrowserIcon('/vite.svg');
+  
+    // =========================
+    // REDIRECT
+    // =========================
+  
     navigate('/');
+  
   };
 
   const handleYearChange = (e) => {
