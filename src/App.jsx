@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ConfirmationModal from './ConfirmationModal'; 
 import imageCompression from 'browser-image-compression'; 
-// 1. THE WIDE TEXT LOGOS (For inside the Contractor Portal)
+
+// 🔥 Import the logos
 import ldiLogo from './assets/ldi-logo.png';
 import gandivaLogo from './assets/gi-logo.png';
 
-// 2. THE SMALL SQUARE SYMBOLS (For the Browser Tab / Title Bar)
+// 🔥 Import the small square symbols
 import ldiSymbol from './assets/ldi-symbol.png';
 import giSymbol from './assets/gi-symbol.png';
 
@@ -15,7 +16,6 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ];
 
-// 3. THE FUNCTION TO CHANGE THE BROWSER TAB ICON
 const changeBrowserIcon = (iconUrl) => {
   let link = document.querySelector("link[rel~='icon']");
   if (!link) {
@@ -60,6 +60,10 @@ export default function Portal() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 🛠️ STEP 4 FIX: Read user token routing context parameter directly from active URL structure
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
+
     const userString = localStorage.getItem('leodoesit_user');
     if (!userString) {
       navigate('/');
@@ -84,13 +88,20 @@ export default function Portal() {
       }
     }
 
-    fetchMyTimesheets(currentUser.email, currentUser.tenant_id);
+    const targetUid = urlUid || currentUser?.id;
+    fetchMyTimesheets(currentUser.email, currentUser.tenant_id, targetUid);
   }, [navigate]);
 
-  const fetchMyTimesheets = async (email, tenantId) => {
+  // 🛠️ STEP 4 FIX: Target user-keyed local token parameters safely inside fetch routing logic
+  const fetchMyTimesheets = async (email, tenantId, uid) => {
+    const userSpecificToken = localStorage.getItem(`token_${uid}`);
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/me/${email}`, {
-        headers: { 'x-tenant-id': tenantId }
+        headers: { 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${userSpecificToken}`
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -151,6 +162,10 @@ export default function Portal() {
 
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
+    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+
     try {
       const startDate = new Date(periodStart);
       const endDate = new Date(periodEnd);
@@ -165,13 +180,16 @@ export default function Portal() {
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
         method: 'POST',
-        headers: { 'x-tenant-id': user.tenant_id },
+        headers: { 
+          'x-tenant-id': user.tenant_id,
+          'Authorization': `Bearer ${userSpecificToken}`
+        },
         body: formData 
       });
 
       const data = await response.json();
       if (data.success) {
-        await fetchMyTimesheets(user.email, user.tenant_id); 
+        await fetchMyTimesheets(user.email, user.tenant_id, targetUid); 
         setIsModalOpen(false);
         setIsCreatingNew(false); 
         setHours('');
@@ -200,11 +218,18 @@ export default function Portal() {
       return;
     }
     
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
+    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+
     try {
       setIsSubmitting(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/change-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userSpecificToken}`
+        },
         body: JSON.stringify({ 
           userId: user.id, 
           oldPassword: passwordData.oldPassword, 
@@ -229,6 +254,10 @@ export default function Portal() {
   };
 
   const handleLogout = () => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
+
+    localStorage.removeItem(`token_${targetUid}`);
     localStorage.removeItem('leodoesit_user');
     document.title = "Portal Login";
     changeBrowserIcon('/vite.svg'); 
@@ -281,10 +310,10 @@ export default function Portal() {
         </div>
       </nav>
 
-      {/* --- CORE STRUCTURAL GRID CONTENT wrappers --- */}
+      {/* --- CORE STRUCTURAL GRID CONTENT --- */}
       <div className="dashboard-content" style={styles.portalLayout}>
         
-        {/* --- LEFT SIDEBAR (Converted to standard layout utility) --- */}
+        {/* --- LEFT SIDEBAR --- */}
         <div className="billing-card" style={styles.sidebar}>
           <h3 style={{ margin: '0 0 20px 0', color: '#111827', fontSize: '18px' }}>Billing Filter</h3>
           
@@ -326,7 +355,7 @@ export default function Portal() {
           </div>
         </div>
 
-        {/* --- RIGHT MAIN CARD (Fluid Width Container Block) --- */}
+        {/* --- RIGHT MAIN CARD --- */}
         <div className="billing-card" style={styles.mainCard}>
           
           {!isCreatingNew && displayedTimesheets.length > 0 ? (
@@ -419,7 +448,7 @@ export default function Portal() {
             
           ) : (
             
-            /* VIEW 3: EMPTY STATE (Perfect alignment wrapper fix) */
+            /* VIEW 3: EMPTY STATE */
             <div style={{ textAlign: 'center', padding: '40px 10px' }}>
               <div style={{ fontSize: '44px', marginBottom: '10px' }}>📂</div>
               <h2 style={{ color: '#111827', margin: '0 0 10px 0', fontSize: '20px' }}>No Data Found</h2>
@@ -500,36 +529,21 @@ export default function Portal() {
   );
 }
 
-// --- Dynamic Styles Matrix Definition ---
 const styles = {
   container: { minHeight: '100vh', width: '100%', backgroundColor: '#F3F4F6', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', margin: 0, padding: 0, boxSizing: 'border-box' },
   nav: { backgroundColor: '#111827', padding: '10px 0', width: '100%' },
   navContent: { maxWidth: '1000px', margin: '0 auto', padding: '0 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' },
-  
-  logoBadge: { 
-    backgroundColor: 'white', 
-    padding: '6px 10px', 
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-    display: 'flex',
-    alignItems: 'center',
-    justifycontent: 'center'
-  },
+  logoBadge: { backgroundColor: 'white', padding: '6px 10px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   portalBadge: { color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px', whiteSpace: 'nowrap' },
   changePassBtn: { backgroundColor: 'transparent', color: '#D1D5DB', border: '1px solid #4B5563', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
   userInfo: { color: '#D1D5DB', fontSize: '13px', fontWeight: '500' },
   logoutBtn: { backgroundColor: 'transparent', color: '#9CA3AF', border: '1px solid #4B5563', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
-  
   portalLayout: { flex: 1, width: '100%', maxWidth: '1000px', margin: '20px auto', padding: '0 15px 30px 15px', boxSizing: 'border-box' },
-  
   sidebar: { padding: '20px', borderRadius: '16px', boxShadow: '0 4px 15px -3px rgba(0, 0, 0, 0.05)', backgroundColor: 'white' },
   mainCard: { padding: '25px', borderRadius: '16px', boxShadow: '0 4px 15px -3px rgba(0, 0, 0, 0.05)', backgroundColor: 'white' },
-  
   sidebarStatusBox: { marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' },
-  
   title: { margin: '0 0 5px 0', color: '#111827', fontSize: '24px', fontWeight: '700' },
   subtitle: { margin: 0, color: '#6B7280', fontSize: '14px' },
-  
   form: { display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '15px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', boxSizing: 'border-box' },
   label: { fontSize: '12px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' },
@@ -538,17 +552,13 @@ const styles = {
   fileList: { marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' },
   fileItem: { backgroundColor: '#E0E7FF', color: '#3730A3', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' },
   submitBtn: { color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', width: '100%' },
-  
   addBtn: { border: 'none', padding: '12px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', width: '100%', textAlign: 'center' },
   cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '8px 14px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' },
-  
   statusView: { display: 'flex', flexDirection: 'column' },
   statusBox: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '12px', boxSizing: 'border-box' },
-  
   badgePending: { backgroundColor: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #FDE68A', whiteSpace: 'nowrap' },
   badgeApproved: { backgroundColor: '#D1FAE5', color: '#059669', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #A7F3D0', whiteSpace: 'nowrap' },
   badgeRejected: { backgroundColor: '#FEE2E2', color: '#DC2626', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', border: '1px solid #FECACA', whiteSpace: 'nowrap' },
-
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '15px' },
   modalContent: { backgroundColor: 'white', padding: '25px', borderRadius: '12px', width: '100%', maxWidth: '380px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', boxSizing: 'border-box' },
   modalInput: { width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', boxSizing: 'border-box', outline: 'none', fontSize: '14px' },

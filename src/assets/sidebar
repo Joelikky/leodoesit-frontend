@@ -46,6 +46,10 @@ export default function Portal() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // 🛠️ STEP 2 FIX: Read user tracking context directly out of the active address parameters
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
+
     const userString = localStorage.getItem('leodoesit_user');
     if (!userString) {
       navigate('/');
@@ -55,7 +59,7 @@ export default function Portal() {
     const currentUser = JSON.parse(userString);
     setUser(currentUser);
 
-    // 🔥 Find or create the browser's favicon tag
+    // Find or create the browser's favicon tag
     let favicon = document.querySelector("link[rel~='icon']");
     if (!favicon) {
       favicon = document.createElement('link');
@@ -68,26 +72,32 @@ export default function Portal() {
         setCompanyName('Gandiva Insights');
         setThemeColor('#4F46E5'); 
         
-        // 🔥 Update Tab Title and Icon for Gandiva
         document.title = "Gandiva Insights";
         favicon.href = gandivaLogo;
       } else {
         setCompanyName('Leodoes It');
         setThemeColor('#10B981'); 
         
-        // 🔥 Update Tab Title and Icon for Leodoes It
         document.title = "Leodoes IT";
         favicon.href = ldiLogo;
       }
     }
 
-    fetchMyTimesheets(currentUser.email, currentUser.tenant_id);
+    // Pass the context tracking variables cleanly through to downstream loops
+    const targetUid = urlUid || currentUser?.id;
+    fetchMyTimesheets(currentUser.email, currentUser.tenant_id, targetUid);
   }, [navigate]);
 
-  const fetchMyTimesheets = async (email, tenantId) => {
+  // 🛠️ STEP 2 FIX: Look up the user-specific cryptographic token token from local storage
+  const fetchMyTimesheets = async (email, tenantId, uid) => {
+    const userSpecificToken = localStorage.getItem(`token_${uid}`);
+    
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/me/${email}`, {
-        headers: { 'x-tenant-id': tenantId }
+        headers: { 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${userSpecificToken}`
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -148,6 +158,10 @@ export default function Portal() {
 
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
+    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+
     try {
       const startDate = new Date(periodStart);
       const endDate = new Date(periodEnd);
@@ -162,13 +176,16 @@ export default function Portal() {
 
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
         method: 'POST',
-        headers: { 'x-tenant-id': user.tenant_id },
+        headers: { 
+          'x-tenant-id': user.tenant_id,
+          'Authorization': `Bearer ${userSpecificToken}`
+        },
         body: formData 
       });
 
       const data = await response.json();
       if (data.success) {
-        await fetchMyTimesheets(user.email, user.tenant_id); 
+        await fetchMyTimesheets(user.email, user.tenant_id, targetUid); 
         setIsModalOpen(false);
         setIsCreatingNew(false); 
         setHours('');
@@ -190,7 +207,6 @@ export default function Portal() {
     }
   };
 
-  // Password Submit Handler
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -198,11 +214,18 @@ export default function Portal() {
       return;
     }
     
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
+    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+
     try {
       setIsSubmitting(true);
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/change-password`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${userSpecificToken}`
+        },
         body: JSON.stringify({ 
           userId: user.id, 
           oldPassword: passwordData.oldPassword, 
@@ -227,6 +250,11 @@ export default function Portal() {
   };
 
   const handleLogout = () => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
+    
+    // Wipe localized footprint strings cleanly out of memory cache blocks
+    localStorage.removeItem(`token_${targetUid}`);
     localStorage.removeItem('leodoesit_user');
     navigate('/');
   };
@@ -256,7 +284,7 @@ export default function Portal() {
       <nav style={styles.nav}>
         <div style={styles.navContent}>
           
-          {/* 🔥 IDENTICAL BRANDING: Left Side Logo */}
+          {/* IDENTICAL BRANDING: Left Side Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={styles.logoBadge}>
               <img 
@@ -362,7 +390,7 @@ export default function Portal() {
 
           ) : isCreatingNew || (displayedTimesheets.length > 0 && displayedTimesheets.some(ts => ts.status === 'REJECTED')) ? (
 
-            /* VIEW 2: THE SUBMISSION FORM (Now requires Dates) */
+            /* VIEW 2: THE SUBMISSION FORM */
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '30px' }}>
                 <div>
@@ -501,33 +529,18 @@ const styles = {
   container: { height: '100vh', width: '100vw', backgroundColor: '#F3F4F6', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 0, padding: 0, boxSizing: 'border-box' },
   nav: { backgroundColor: '#111827', padding: '15px 0' },
   navContent: { maxWidth: '1000px', margin: '0 auto', padding: '0 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  
-  logoBadge: { 
-    backgroundColor: 'white', 
-    padding: '8px 12px', 
-    borderRadius: '8px',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
+  logoBadge: { backgroundColor: 'white', padding: '8px 12px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
   portalBadge: { color: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', letterSpacing: '0.5px' },
   changePassBtn: { backgroundColor: 'transparent', color: '#D1D5DB', border: '1px solid #4B5563', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', transition: '0.2s' },
-  
   userInfo: { color: '#D1D5DB', fontSize: '14px' },
   logoutBtn: { backgroundColor: 'transparent', color: '#9CA3AF', border: '1px solid #4B5563', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' },
-  
   portalLayout: { flex: 1, width: '100%', maxWidth: '1000px', margin: '40px auto', padding: '0 20px 40px 20px', display: 'flex', gap: '30px', alignItems: 'flex-start', overflowY: 'auto' },
-  
   sidebar: { width: '280px', flexShrink: 0, backgroundColor: 'white', padding: '25px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' },
   mainCard: { flex: 1, backgroundColor: 'white', padding: '40px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' },
-  
   sidebarStatusBox: { marginTop: '25px', paddingTop: '25px', borderTop: '1px solid #E5E7EB', display: 'flex', flexDirection: 'column' },
-  
   title: { margin: '0 0 10px 0', color: '#111827', fontSize: '28px' },
   subtitle: { margin: 0, color: '#6B7280', fontSize: '15px' },
   rejectedBanner: { backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', padding: '15px', borderRadius: '8px', marginTop: '20px', fontSize: '14px' },
-  
   form: { display: 'flex', flexDirection: 'column', gap: '25px', marginTop: '20px' },
   inputGroup: { display: 'flex', flexDirection: 'column', gap: '8px' },
   label: { fontSize: '13px', fontWeight: 'bold', color: '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' },
@@ -536,20 +549,14 @@ const styles = {
   fileList: { marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' },
   fileItem: { backgroundColor: '#E0E7FF', color: '#3730A3', padding: '6px 12px', borderRadius: '4px', fontSize: '13px', fontWeight: 'bold' },
   submitBtn: { color: 'white', border: 'none', padding: '16px', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', width: '100%', transition: '0.2s' },
-  
   addBtn: { border: 'none', padding: '12px', borderRadius: '8px', fontSize: '14px', fontWeight: 'bold', width: '100%', transition: '0.2s' },
   cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '8px 16px', borderRadius: '6px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' },
-  
   statusView: { display: 'flex', flexDirection: 'column' },
   statusHeader: { textAlign: 'center', marginBottom: '30px' },
   statusBox: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '12px', textAlign: 'center' },
-  
-  // Status Badges
   badgePending: { backgroundColor: '#FEF3C7', color: '#D97706', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #FDE68A' },
   badgeApproved: { backgroundColor: '#D1FAE5', color: '#059669', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #A7F3D0' },
   badgeRejected: { backgroundColor: '#FEE2E2', color: '#DC2626', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: '1px solid #FECACA' },
-
-  // Password Modal Styles
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modalContent: { backgroundColor: 'white', padding: '30px', borderRadius: '12px', width: '400px', maxWidth: '90%', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' },
   modalInput: { width: '100%', padding: '10px', border: '1px solid #D1D5DB', borderRadius: '6px', boxSizing: 'border-box', outline: 'none' },

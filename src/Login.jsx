@@ -31,12 +31,19 @@ export default function Login() {
       const data = await response.json();
 
       if (data.success) {
+        // A. Save the baseline session profile metadata footprint
         localStorage.setItem('leodoesit_user', JSON.stringify(data.data));
 
+        // 🛠️ B. STEP 1 FIX: Isolate and key this security token explicitly by the logged-in User's unique ID
+        if (data.token) {
+          localStorage.setItem(`token_${data.data.id}`, data.token);
+        }
+
+        // 🛠️ C. STEP 1 FIX: Append the active context ID explicitly into the URL path parameters
         if (data.data.role === 'ADMIN') {
-          navigate('/admin/queue');
+          navigate(`/admin/queue?uid=${data.data.id}`);
         } else {
-          navigate('/portal'); 
+          navigate(`/portal?uid=${data.data.id}`); 
         }
       } else {
         setError(data.error);
@@ -107,7 +114,6 @@ export default function Login() {
 }
 
 const styles = {
-  // 🔥 THE FINAL FIX: Pinned strictly to the corners to kill all scrollbars
   container: { 
     position: 'fixed',
     top: 0,
@@ -119,20 +125,13 @@ const styles = {
     backgroundColor: '#F9FAFB',
     overflow: 'hidden'
   },
-  
-  // Hiding the entire left panel
   leftPanel: { display: 'none' }, 
-  
   rightPanel: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  
   branding: { zIndex: 10 },
   logo: { fontSize: '48px', margin: '0 0 10px 0', letterSpacing: '-1px', transition: 'color 0.4s ease' },
   tagline: { fontSize: '20px', color: '#94A3B8', margin: 0, fontWeight: '300' },
   circle1: { position: 'absolute', bottom: '-10%', left: '-10%', width: '400px', height: '400px', borderRadius: '50%', transition: 'background 0.4s ease' },
-  
-  // The larger, centered login box
   loginBox: { backgroundColor: 'white', padding: '60px', borderRadius: '16px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)', width: '100%', maxWidth: '550px' },
-  
   title: { fontSize: '32px', margin: '0 0 8px 0', color: '#111827' },
   subtitle: { color: '#6B7280', margin: '0 0 30px 0', fontSize: '16px' },
   errorBox: { backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', border: '1px solid #FECACA' },

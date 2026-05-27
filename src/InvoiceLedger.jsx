@@ -34,11 +34,22 @@ export default function InvoiceLedger() {
     setSelectedInvoices([]); 
   }, [searchTerm, activeTab, filterMonth, filterYear, filterVendor]);
 
+  // 🛠️ STEP 3 FIX: Extract token using uid query parameter context
   const fetchInvoices = async () => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
+
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+    const targetUid = urlUid || admin?.id;
+    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
-        headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+        headers: { 
+          'Content-Type': 'application/json', 
+          'x-tenant-id': admin?.tenant_id,
+          'Authorization': `Bearer ${userSpecificToken}`
+        }
       });
       const data = await response.json();
       if (data.success) setInvoices(data.data || []);
@@ -49,11 +60,22 @@ export default function InvoiceLedger() {
     finally { setLoading(false); }
   };
 
+  // 🛠️ STEP 3 FIX: Update background mutations to route authorization tags cleanly
   const runApiAction = async (url, method, bodyData = null) => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
+
     const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+    const targetUid = urlUid || admin?.id;
+    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+
     const options = {
       method,
-      headers: { 'Content-Type': 'application/json', 'x-tenant-id': admin?.tenant_id }
+      headers: { 
+        'Content-Type': 'application/json', 
+        'x-tenant-id': admin?.tenant_id,
+        'Authorization': `Bearer ${userSpecificToken}`
+      }
     };
     if (bodyData) options.body = JSON.stringify(bodyData);
     const response = await fetch(url, options);
@@ -82,7 +104,6 @@ export default function InvoiceLedger() {
     setSelectedInvoices([]);
 
     setInvoices(prev => {
-      // 🛠️ FIX: Explicitly check for state match structure of 'VOID' to align with PostgreSQL constraints
       if (action === 'VOID') return prev.map(inv => targets.includes(inv.id) ? { ...inv, status: 'VOID' } : inv);
       return prev.map(inv => {
         if (targets.includes(inv.id)) {
@@ -360,7 +381,6 @@ export default function InvoiceLedger() {
                       <button onClick={(e) => downloadPDF(e, inv)} style={{...styles.downloadBtn, backgroundColor: '#374151'}}>View</button>
                       <button onClick={() => handleActionClick('EMAIL', inv.id, false)} style={{...styles.downloadBtn, backgroundColor: '#3B82F6'}}>Mail</button>
 
-                      {/* 🛠️ FIX: Only render core mutations if the configuration state is explicitly active and not 'VOID' */}
                       {inv.status !== 'VOID' && (
                         <>
                           <button onClick={() => handleActionClick('PAY', inv.id)} style={{...styles.downloadBtn, backgroundColor: '#10B981'}}>Pay</button>
@@ -449,7 +469,6 @@ export default function InvoiceLedger() {
                 <button onClick={(e) => downloadPDF(e, drawerInvoice)} style={{...styles.submitBtn, backgroundColor: '#1F2937'}}>📄 Download PDF Invoice</button>
                 <button onClick={() => handleActionClick('EMAIL', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#3B82F6'}}>✉️ Send Invoice Email</button>
 
-                {/* 🛠️ FIX: Cleanly strip contextual interactive inputs out of the drawer pane if the entity has already been marked as VOID */}
                 {drawerInvoice.status !== 'VOID' && (
                   <>
                     {drawerInvoice.status === 'PARTIAL' && (
