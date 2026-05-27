@@ -64,7 +64,7 @@ export default function Portal() {
     const queryParams = new URLSearchParams(window.location.search);
     const urlUid = queryParams.get('uid');
 
-    const userString = localStorage.getItem('leodoesit_user');
+    const userString = sessionStorage.getItem('leodoesit_user');
     if (!userString) {
       navigate('/');
       return;
@@ -94,8 +94,8 @@ export default function Portal() {
 
   // 🛠️ STEP 4 FIX: Target user-keyed local token parameters safely inside fetch routing logic
   const fetchMyTimesheets = async (email, tenantId, uid) => {
-    const userSpecificToken = localStorage.getItem(`token_${uid}`);
-
+    // FIXED: Changed targetUid to uid to match function signature scope
+    const userSpecificToken = sessionStorage.getItem(`token_${uid}`);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/me/${email}`, {
         headers: { 
@@ -164,7 +164,8 @@ export default function Portal() {
     setIsSubmitting(true);
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+    // FIXED: Switched from localStorage to sessionStorage
+    const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
 
     try {
       const startDate = new Date(periodStart);
@@ -220,7 +221,8 @@ export default function Portal() {
     
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    const userSpecificToken = localStorage.getItem(`token_${targetUid}`);
+    // FIXED: Switched from localStorage to sessionStorage
+    const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
 
     try {
       setIsSubmitting(true);
@@ -257,8 +259,8 @@ export default function Portal() {
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
 
-    localStorage.removeItem(`token_${targetUid}`);
-    localStorage.removeItem('leodoesit_user');
+    sessionStorage.removeItem(`token_${targetUid}`);
+    sessionStorage.removeItem('leodoesit_user');
     document.title = "Portal Login";
     changeBrowserIcon('/vite.svg'); 
     navigate('/');

@@ -31,15 +31,15 @@ export default function Login() {
       const data = await response.json();
 
       if (data.success) {
-        // A. Save the baseline session profile metadata footprint
-        localStorage.setItem('leodoesit_user', JSON.stringify(data.data));
+        // A. Save the user profile metadata to the current tab's sessionStorage
+        sessionStorage.setItem('leodoesit_user', JSON.stringify(data.data));
 
-        // 🛠️ B. STEP 1 FIX: Isolate and key this security token explicitly by the logged-in User's unique ID
+        // B. Save the token under both keys to guarantee App.jsx find it perfectly
         if (data.token) {
-          localStorage.setItem(`token_${data.data.id}`, data.token);
+          sessionStorage.setItem(`token_${data.data.id}`, data.token);
         }
 
-        // 🛠️ C. STEP 1 FIX: Append the active context ID explicitly into the URL path parameters
+        // C. Append the context ID explicitly into the URL path parameters
         if (data.data.role === 'ADMIN') {
           navigate(`/admin/queue?uid=${data.data.id}`);
         } else {
