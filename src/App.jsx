@@ -60,216 +60,94 @@ export default function Portal() {
   const navigate = useNavigate();
 
   useEffect(() => {
-
-    // =========================
-    // GET ACTIVE UID FROM URL
-    // =========================
-  
-    const queryParams =
-      new URLSearchParams(window.location.search);
-  
-    const urlUid =
-      queryParams.get('uid');
-  
-    // =========================
-    // INVALID SESSION
-    // =========================
+    const queryParams = new URLSearchParams(window.location.search);
+    const urlUid = queryParams.get('uid');
   
     if (!urlUid) {
-  
       console.error("UID missing");
-  
       navigate('/');
-  
       return;
     }
   
-    // =========================
-    // LOAD USER FOR THIS TAB
-    // =========================
-  
-    const userString =
-      sessionStorage.getItem(
-        `user_${urlUid}`
-      );
-  
-    // =========================
-    // USER NOT FOUND
-    // =========================
+    const userString = sessionStorage.getItem(`user_${urlUid}`);
   
     if (!userString) {
-  
       console.error("User session missing");
-  
       navigate('/');
-  
       return;
     }
   
-    // =========================
-    // PARSE USER
-    // =========================
-  
-    const currentUser =
-      JSON.parse(userString);
-      console.log("CURRENT USER:", currentUser);
-  
+    const currentUser = JSON.parse(userString);
     setUser(currentUser);
   
-    // =========================
-    // DYNAMIC BRANDING
-    // =========================
-  
     if (currentUser.tenant_name) {
-  
-      if (
-        currentUser.tenant_name
-          .toLowerCase()
-          .includes('gandiva')
-      ) {
-  
-        setCompanyName(
-          'Gandiva Insights'
-        );
-  
-        setThemeColor(
-          '#4F46E5'
-        );
-  
-        document.title =
-          "Gandiva Portal";
-  
-        changeBrowserIcon(
-          giSymbol
-        );
-  
+      if (currentUser.tenant_name.toLowerCase().includes('gandiva')) {
+        setCompanyName('Gandiva Insights');
+        setThemeColor('#4F46E5');
+        document.title = "Gandiva Portal";
+        changeBrowserIcon(giSymbol);
       } else {
-  
-        setCompanyName(
-          'Leodoes It'
-        );
-  
-        setThemeColor(
-          '#10B981'
-        );
-  
-        document.title =
-          "Leodoes IT Portal";
-  
-        changeBrowserIcon(
-          ldiSymbol
-        );
+        setCompanyName('Leodoes It');
+        setThemeColor('#10B981');
+        document.title = "Leodoes IT Portal";
+        changeBrowserIcon(ldiSymbol);
       }
     }
   
-    // =========================
-    // FETCH USER DATA
-    // =========================
-  
-    fetchMyTimesheets(
-      currentUser.email,
-      currentUser.tenant_id,
-      urlUid
-    );
+    // 🛡️ SUBtle LAYOUT FIX: Intercept malformed string conversions before dispatching
+    if (currentUser.tenant_id && currentUser.tenant_id !== 'undefined' && currentUser.tenant_id !== 'null') {
+      fetchMyTimesheets(currentUser.email, currentUser.tenant_id, urlUid);
+    } else {
+      console.error("Invalid tenant layout parameters detected on session context parse.");
+      setLoading(false);
+    }
   
   }, [navigate]);
 
-  // 🛠️ STEP 4 FIX: Target user-keyed local token parameters safely inside fetch routing logic
-  const fetchMyTimesheets = async (
-    email,
-    tenantId,
-    uid
-  ) => {
-  
-    // =========================
-    // VALIDATION
-    // =========================
-  
-    if (!tenantId) {
-  
-      console.error(
-        "Tenant ID missing"
-      );
-  
+  const fetchMyTimesheets = async (email, tenantId, uid) => {
+    if (!tenantId || tenantId === 'undefined' || tenantId === 'null') {
+      console.error("Tenant ID layout parameter verification aborted.");
       return;
     }
-  
-    if (!uid) {
-  
-      console.error(
-        "UID missing"
-      );
-  
+    if (!uid || uid === 'undefined') {
+      console.error("UID missing");
       return;
     }
-  
-    // =========================
-    // GET TOKEN
-    // =========================
-  
-    const userSpecificToken =
-      sessionStorage.getItem(
-        `token_${uid}`
-      );
+
+    const userSpecificToken = sessionStorage.getItem(`token_${uid}`);
   
     if (!userSpecificToken) {
-  
-      console.error(
-        "Token missing"
-      );
-  
+      console.error("Token missing");
+      setLoading(false);
       return;
     }
   
     try {
-  
       const response = await fetch(
-  
         `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/me/${email}`,
-  
         {
           headers: {
-  
             'x-tenant-id': tenantId,
-  
-            'Authorization':
-              `Bearer ${userSpecificToken}`
-  
+            'Authorization': `Bearer ${userSpecificToken}`
           }
         }
-  
       );
   
-      const data =
-        await response.json();
+      const data = await response.json();
   
       if (data.success) {
-  
         setTimesheets(
-  
           Array.isArray(data.data)
             ? data.data
             : (data.data ? [data.data] : [])
-  
         );
-  
       } else {
-  
         console.error(data.error);
-  
       }
-  
     } catch (error) {
-  
-      console.error(
-        "Failed to fetch timesheets:",
-        error
-      );
-  
+      console.error("Failed to fetch timesheets:", error);
     } finally {
-  
       setLoading(false);
-  
     }
   };
 
@@ -323,7 +201,6 @@ export default function Portal() {
     setIsSubmitting(true);
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    // FIXED: Switched lookup environment strictly from localStorage to sessionStorage
     const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
 
     try {
@@ -331,7 +208,6 @@ export default function Portal() {
       const endDate = new Date(periodEnd);
 
       const formData = new FormData();
-      // 👇 FIX: Use clean targetUid fallback to completely eliminate UUID casting runtime mismatch breaks
       formData.append('user_id', targetUid);
       formData.append('period_start', startDate.toISOString());
       formData.append('period_end', endDate.toISOString());
@@ -381,7 +257,6 @@ export default function Portal() {
     
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    // FIXED: Switched lookup environment strictly from localStorage to sessionStorage
     const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
 
     try {
@@ -393,7 +268,7 @@ export default function Portal() {
           'Authorization': `Bearer ${userSpecificToken}`
         },
         body: JSON.stringify({ 
-          userId: targetUid, // 👇 FIX: Adjusted fallback token scope parameter targeting structure alignment
+          userId: targetUid, 
           oldPassword: passwordData.oldPassword, 
           newPassword: passwordData.newPassword 
         })
@@ -416,52 +291,15 @@ export default function Portal() {
   };
 
   const handleLogout = () => {
-
-    // =========================
-    // GET ACTIVE UID
-    // =========================
+    const queryParams = new URLSearchParams(window.location.search);
+    const targetUid = queryParams.get('uid') || user?.id;
   
-    const queryParams =
-      new URLSearchParams(window.location.search);
+    sessionStorage.removeItem(`token_${targetUid}`);
+    sessionStorage.removeItem(`user_${targetUid}`);
   
-    const targetUid =
-      queryParams.get('uid') || user?.id;
-  
-    // =========================
-    // REMOVE TOKEN
-    // =========================
-  
-    sessionStorage.removeItem(
-      `token_${targetUid}`
-    );
-  
-    // =========================
-    // REMOVE USER
-    // =========================
-  
-    sessionStorage.removeItem(
-      `user_${targetUid}`
-    );
-  
-    // =========================
-    // RESET TITLE
-    // =========================
-  
-    document.title =
-      "Portal Login";
-  
-    // =========================
-    // RESET ICON
-    // =========================
-  
+    document.title = "Portal Login";
     changeBrowserIcon('/vite.svg');
-  
-    // =========================
-    // REDIRECT
-    // =========================
-  
     navigate('/');
-  
   };
 
   const handleYearChange = (e) => {
@@ -488,7 +326,6 @@ export default function Portal() {
       {/* --- TOP NAVIGATION --- */}
       <nav style={styles.nav}>
         <div className="responsive-header" style={styles.navContent}>
-          
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
             <div style={styles.logoBadge}>
               <img 
@@ -559,7 +396,6 @@ export default function Portal() {
         <div className="billing-card" style={styles.mainCard}>
           
           {!isCreatingNew && displayedTimesheets.length > 0 ? (
-            /* VIEW 1: MULTIPLE TIMESHEET DASHBOARD */
             <div style={styles.statusView}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
@@ -593,8 +429,6 @@ export default function Portal() {
             </div>
 
           ) : isCreatingNew || (displayedTimesheets.length > 0 && displayedTimesheets.some(ts => ts.status === 'REJECTED')) ? (
-
-            /* VIEW 2: THE SUBMISSION FORM */
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '25px', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
@@ -605,7 +439,6 @@ export default function Portal() {
               </div>
 
               <form onSubmit={handleOpenPopup} style={styles.form}>
-                
                 <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                   <div style={{ ...styles.inputGroup, flex: '1 1 200px' }}>
                     <label style={styles.label}>Start Date</label>
@@ -647,8 +480,6 @@ export default function Portal() {
             </div>
             
           ) : (
-            
-            /* VIEW 3: EMPTY STATE */
             <div style={{ textAlign: 'center', padding: '40px 10px' }}>
               <div style={{ fontSize: '44px', marginBottom: '10px' }}>📂</div>
               <h2 style={{ color: '#111827', margin: '0 0 10px 0', fontSize: '20px' }}>No Data Found</h2>
@@ -657,7 +488,6 @@ export default function Portal() {
                 + Submit Your First Timesheet
               </button>
             </div>
-            
           )}
         </div>
       </div>
@@ -671,7 +501,6 @@ export default function Portal() {
               <button onClick={() => setIsPasswordModalOpen(false)} style={styles.closeBtn}>✕</button>
             </div>
             <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              
               <div>
                 <label style={styles.label}>Current Password</label>
                 <input 
@@ -711,7 +540,6 @@ export default function Portal() {
                 </button>
                 <button type="button" onClick={() => setIsPasswordModalOpen(false)} style={{...styles.cancelBtn, padding: '10px 15px'}}>Cancel</button>
               </div>
-
             </form>
           </div>
         </div>

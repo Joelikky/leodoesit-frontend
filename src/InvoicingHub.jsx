@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const MONTHS = [
@@ -30,30 +30,34 @@ export default function InvoicingHub() {
 
   const navigate = useNavigate();
 
+  // 🛡️ Safe Context Parsing Hook Configuration
+  const adminUser = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const currentTenantId = adminUser?.tenant_id;
+
   useEffect(() => {
-    fetchHubData();
-  }, []);
+    // 🛡️ FRONTEND GUARDRAIL: Immediately abort fetch sequences if workspace markers are uninitialized
+    if (!currentTenantId || currentTenantId === 'undefined' || currentTenantId === 'null') {
+      setLoading(false);
+      return;
+    }
+    
+    fetchHubData(currentTenantId);
+  }, [currentTenantId]); // Gracefully tracks state stabilization
 
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterMonth, filterYear]);
 
-  const fetchHubData = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
-    
-    if (!admin?.tenant_id) {
-      console.error("Session Error: No Tenant ID found.");
-      setLoading(false);
-      return;
-    }
-
+  const fetchHubData = async (tenantId) => {
+    if (!tenantId || tenantId === 'undefined') return;
+    setLoading(true);
     try {
       const [tsResponse, clientsResponse] = await Promise.all([
         fetch(`${import.meta.env.VITE_API_URL}/api/timesheets?status=APPROVED`,  {
-          headers: { 'x-tenant-id': admin.tenant_id } 
+          headers: { 'x-tenant-id': tenantId } 
         }),
         fetch(`${import.meta.env.VITE_API_URL}/api/clients`, {
-        headers: { 'x-tenant-id': admin.tenant_id } 
+          headers: { 'x-tenant-id': tenantId } 
         })
       ]);
       
@@ -85,16 +89,14 @@ export default function InvoicingHub() {
 
   const executeGenerateInvoice = async (timesheetId, clientId) => {
     setIsProcessing(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
-
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/invoices`, {
-                 method: 'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           timesheet_id: timesheetId, 
           client_id: clientId,
-          tenant_id: admin?.tenant_id 
+          tenant_id: currentTenantId 
         })
       });
       
@@ -115,14 +117,12 @@ export default function InvoicingHub() {
 
   const executeVoidTimesheet = async (timesheetId) => {
     setIsProcessing(true);
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
-
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${timesheetId}/void`, {
-      method: 'PUT',
+        method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',
-          'x-tenant-id': admin?.tenant_id 
+          'x-tenant-id': currentTenantId 
         }
       });
       
@@ -213,14 +213,13 @@ export default function InvoicingHub() {
   return (
     <div style={{ position: 'relative', width: '100%', boxSizing: 'border-box' }}>
       
-      {/* FIXED HEADER: Employs responsive-header class from your App.css */}
+      {/* FIXED HEADER */}
       <div className="responsive-header" style={styles.header}>
         <div>
           <h1 style={styles.title}>Invoicing Hub</h1>
           <p style={styles.subtitle}>Assign approved hours to clients and generate official invoices.</p>
         </div>
         
-        {/* Responsive controls wrapping wrapper */}
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} style={styles.searchInput}>
             <option value="ALL">All Months</option>
@@ -255,11 +254,11 @@ export default function InvoicingHub() {
 
       {/* DASHBOARD GRID CONTENT CONTAINER */}
       <div className="dashboard-content">
-        
-        {/* Wrapped table card to keep layout responsive inside billing-card wrapper */}
         <div className="billing-card" style={styles.tableCardContainer}>
           {loading ? (
             <p style={{ padding: '20px' }}>Loading approved timesheets...</p>
+          ) : (!currentTenantId || currentTenantId === 'undefined') ? (
+            <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization token layout header. Please re-authenticate.</p>
           ) : processedTimesheets.length === 0 ? (
             <div style={styles.emptyState}>
               <div style={styles.emptyStateIcon}>🎉</div>
@@ -271,7 +270,6 @@ export default function InvoicingHub() {
             </div>
           ) : (
             <>
-              {/* Added responsive overflow wrap wrapper */}
               <div style={{ width: '100%', overflowX: 'auto' }}>
                 <table style={styles.table}>
                   <thead>
@@ -389,7 +387,6 @@ export default function InvoicingHub() {
             </>
           )}
         </div>
-
       </div>
 
       {/* OVERLAY MODAL */}

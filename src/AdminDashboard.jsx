@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 const getExpectedMonthlyHours = (periodStart, apiHolidays = []) => {
   const date = new Date(periodStart || Date.now());
   
-  // 🔥 FIX: Removed the date.setMonth() shift that was grabbing the wrong month
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth(); 
 
@@ -50,10 +49,20 @@ export default function AdminDashboard() {
   const [muteApprovals, setMuteApprovals] = useState(sessionStorage.getItem('muteApprovals') === 'true');
   const [tempMuteCheck, setTempMuteCheck] = useState(false);
 
+  // 🛡️ Safe context validation state hook configuration
+  const adminUser = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const currentTenantId = adminUser?.tenant_id;
+
   useEffect(() => {
-    fetchTimesheets();
+    // 🛡️ FRONTEND GUARDRAIL: Intercept the execution path immediately if context layout boundaries lag
+    if (!currentTenantId || currentTenantId === 'undefined' || currentTenantId === 'null') {
+      setLoading(false);
+      return;
+    }
+
+    fetchTimesheets(currentTenantId);
     fetchLiveHolidays(); 
-  }, []);
+  }, [currentTenantId]); // Gracefully tracks context stability transitions
 
   useEffect(() => {
     setSelectedIds([]);
@@ -79,17 +88,17 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchTimesheets = async () => {
-    const admin = JSON.parse(localStorage.getItem('leodoesit_user'));
+  const fetchTimesheets = async (tenantId) => {
+    if (!tenantId || tenantId === 'undefined') return;
+    setLoading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets`, {
-        headers: { 'x-tenant-id': admin?.tenant_id } 
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
+        headers: { 'x-tenant-id': tenantId } 
       });
       const data = await response.json();
       if (data.success) {
         const dataWithMockProof = data.data.map(ts => ({
           ...ts,
-          // 🔥 FIX 1 IS HERE: Explicitly checking array length so empty arrays get placeholders
           screenshot_urls: (ts.screenshot_urls && ts.screenshot_urls.length > 0) ? ts.screenshot_urls : [
             'https://placehold.co/600x400/E5E7EB/4B5563?text=Timesheet+Proof+1',
             'https://placehold.co/600x400/E5E7EB/4B5563?text=Timesheet+Proof+2'
@@ -146,9 +155,9 @@ export default function AdminDashboard() {
     try {
       for (let id of targetArray) {
         if (action === 'APPROVE') {
-          await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${id}/approve`, { method: 'PUT' });
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/approve`, { method: 'PUT' });
         } else if (action === 'REJECT') {
-          await fetch(`${import.meta.env.VITE_API_URL}/api/timesheets/${id}/reject`, {
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/reject`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ rejection_reason: reason })
@@ -219,7 +228,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative', boxSizing: 'border-box' }}>
       <div style={styles.header}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
@@ -284,6 +293,8 @@ export default function AdminDashboard() {
       <div style={styles.tableContainer}>
         {loading ? (
           <p style={{ padding: '20px' }}>Loading queue...</p>
+        ) : (!currentTenantId || currentTenantId === 'undefined') ? (
+          <p style={{ padding: '20px', color: '#DC2626', fontWeight: 'bold' }}>⚠️ Missing multi-tenant authorization framework header. Please re-authenticate.</p>
         ) : filteredList.length === 0 ? (
           <div style={styles.emptyStateContainer}>
             <svg style={styles.emptyStateIcon} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -417,7 +428,6 @@ export default function AdminDashboard() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '15px' }}>
                     {drawerItem.screenshot_urls.map((url, i) => (
                       <a key={i} href={url} target="_blank" rel="noreferrer" style={styles.imageCard} className="proof-image-card">
-                        {/* 🔥 FIX 2 IS HERE: Added single quotes around ${url} */}
                         <div style={{ ...styles.imagePreview, backgroundImage: `url('${url}')` }}></div>
                         <div style={{ padding: '10px', fontSize: '12px', color: '#4B5563', textAlign: 'center', backgroundColor: 'white' }}>Image {i+1}</div>
                       </a>
