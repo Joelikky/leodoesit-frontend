@@ -5,6 +5,7 @@ import { useOutletContext } from 'react-router-dom';
 // SMART CALCULATOR: Determines total US working hours using LIVE API Data
 const getExpectedMonthlyHours = (periodStart, apiHolidays = []) => {
   const date = new Date(periodStart || Date.now());
+  if (isNaN(date.getTime())) return 160; // Safe static fallback if date parsing fails
   
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth(); 
@@ -29,8 +30,23 @@ const getExpectedMonthlyHours = (periodStart, apiHolidays = []) => {
 };
 
 export default function AdminDashboard() {
-  // 🔥 FIX 2: Intercept the parent context attributes safely right here
-  const { adminUser, adminToken } = useOutletContext();
+  // 🔥 FIX 2: Safely extract routing context with an empty object fallback to guarantee safety
+  const context = useOutletContext() || {};
+  let adminUser = context.adminUser;
+  let adminToken = context.adminToken;
+
+  // 🔥 FOOLPROOF BACKUP: If layout wrapper context fails, read parameters directly from session
+  const queryParams = new URLSearchParams(window.location.search);
+  const currentUid = queryParams.get('uid');
+
+  if (!adminUser && currentUid) {
+    const backupUserString = sessionStorage.getItem(`user_${currentUid}`);
+    if (backupUserString) adminUser = JSON.parse(backupUserString);
+  }
+  if (!adminToken && currentUid) {
+    adminToken = sessionStorage.getItem(`token_${currentUid}`);
+  }
+
   const currentTenantId = adminUser?.tenant_id;
 
   const [timesheets, setTimesheets] = useState([]);
@@ -56,7 +72,6 @@ export default function AdminDashboard() {
   const [tempMuteCheck, setTempMuteCheck] = useState(false);
 
   useEffect(() => {
-    // Front-end security frame sentinel
     if (!currentTenantId || !adminToken) {
       setLoading(false);
       return;
@@ -96,7 +111,6 @@ export default function AdminDashboard() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
         headers: { 
-          // 🔥 FIX 3: Append full dynamic Bearer authorization properties 
           'x-tenant-id': tenantId,
           'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json'
@@ -104,7 +118,7 @@ export default function AdminDashboard() {
       });
       const data = await response.json();
       if (data.success) {
-        const dataWithMockProof = data.data.map(ts => ({
+        const dataWithMockProof = (data.data || []).map(ts => ({
           ...ts,
           screenshot_urls: (ts.screenshot_urls && ts.screenshot_urls.length > 0) ? ts.screenshot_urls : [
             'https://placehold.co/600x400/E5E7EB/4B5563?text=Timesheet+Proof+1',
@@ -142,7 +156,6 @@ export default function AdminDashboard() {
     }
 
     const targets = modalConfig.isBulk ? selectedIds : [modalConfig.targetId];
-    
     setModalConfig({ isOpen: false, action: '', targetId: null, isBulk: false });
     if (drawerItem) setDrawerItem(null); 
 
@@ -150,7 +163,6 @@ export default function AdminDashboard() {
   };
 
   const executeBackendAction = async (action, targetArray, reason = '') => {
-    // Optimistic UI updates setup
     setTimesheets(prevTimesheets => prevTimesheets.map(ts => {
       if (targetArray.includes(ts.id)) {
         return { ...ts, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' };
@@ -165,7 +177,6 @@ export default function AdminDashboard() {
         if (action === 'APPROVE') {
           await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/approve`, { 
             method: 'PUT',
-            // 🔥 FIX 4: Add required multi-tenant validation metadata flags here
             headers: {
               'x-tenant-id': currentTenantId,
               'Authorization': `Bearer ${adminToken}`,
@@ -175,7 +186,6 @@ export default function AdminDashboard() {
         } else if (action === 'REJECT') {
           await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/reject`, {
             method: 'PUT',
-            // 🔥 FIX 5: Mirror authorization settings on rejection routes
             headers: { 
               'x-tenant-id': currentTenantId,
               'Authorization': `Bearer ${adminToken}`,
@@ -204,7 +214,11 @@ export default function AdminDashboard() {
     setSortConfig({ key, direction });
   };
 
-  let filteredList = timesheets.filter(ts => {
+  // Safe baseline fallback array assignment
+  let filteredList = Array.isArray(timesheets) ? timesheets : [];
+
+  filteredList = filteredList.filter(ts => {
+    if (!ts) return false;
     if (viewMode === 'PENDING') return ts.status === 'SUBMITTED';
     return ts.status === 'APPROVED' || ts.status === 'REJECTED'; 
   });
@@ -212,8 +226,11 @@ export default function AdminDashboard() {
   if (viewMode === 'HISTORY') {
     filteredList = filteredList.filter(ts => {
       if (filterMonth === 'ALL' && filterYear === 'ALL') return true;
+      if (!ts.period_start) return false; // Guard against malformed historical entries
       
       const tsDate = new Date(ts.period_start);
+      if (isNaN(tsDate.getTime())) return false;
+
       const tsMonth = String(tsDate.getUTCMonth() + 1).padStart(2, '0'); 
       const tsYear = String(tsDate.getUTCFullYear());
 
@@ -225,14 +242,19 @@ export default function AdminDashboard() {
   }
 
   filteredList = filteredList.filter(ts => {
-    const searchString = `${ts.first_name} ${ts.last_name} ${ts.vendor_name || ''}`.toLowerCase();
+    const searchString = `${ts.first_name || ''} ${ts.last_name || ''} ${ts.vendor_name || ''}`.toLowerCase();
     return searchString.includes(searchTerm.toLowerCase());
   });
 
   filteredList.sort((a, b) => {
     let valA = a[sortConfig.key]; let valB = b[sortConfig.key];
-    if (sortConfig.key === 'total_hours') { valA = parseFloat(valA || 0); valB = parseFloat(valB || 0); } 
-    else { valA = String(valA || '').toLowerCase(); valB = String(valB || '').toLowerCase(); }
+    if (sortConfig.key === 'total_hours') { 
+      valA = parseFloat(valA || 0); 
+      valB = parseFloat(valB || 0); 
+    } else { 
+      valA = String(valA || '').toLowerCase(); 
+      valB = String(valB || '').toLowerCase(); 
+    }
     if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
     if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
     return 0;
@@ -285,11 +307,11 @@ export default function AdminDashboard() {
                 </select>
                 
                 <select value={filterYear} onChange={(e) => setFilterYear(e.target.value)} style={styles.searchInput}>
-                <option value="ALL">All Years</option>
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
+                  <option value="ALL">All Years</option>
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
               </>
             )}
 
@@ -355,25 +377,26 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody>
-            {filteredList.map((ts) => {
-                  const expectedMonthlyHours = getExpectedMonthlyHours(ts.period_start, usHolidays);
-                  const isOvertime = parseFloat(ts.total_hours) > expectedMonthlyHours;
+              {filteredList.map((ts) => {
+                const cleanStart = ts.period_start || new Date().toISOString();
+                const expectedMonthlyHours = getExpectedMonthlyHours(cleanStart, usHolidays);
+                const isOvertime = parseFloat(ts.total_hours || 0) > expectedMonthlyHours;
 
-                  return (
-                  <tr key={ts.id} onClick={() => setDrawerItem(ts)} style={styles.tableRow} className="admin-table-row">
+                return (
+                  <tr key={ts.id || Math.random()} onClick={() => setDrawerItem(ts)} style={styles.tableRow}>
                     {viewMode === 'PENDING' && (
                       <td style={styles.td} onClick={e => e.stopPropagation()}>
                         <input type="checkbox" checked={selectedIds.includes(ts.id)} onChange={() => toggleSelection(ts.id)} />
                       </td>
                     )}
-                    <td style={styles.td}><strong>{ts.first_name} {ts.last_name}</strong></td>
+                    <td style={styles.td}><strong>{ts.first_name || 'N/A'} {ts.last_name || ''}</strong></td>
                     <td style={styles.td}>
-                        <span style={{ backgroundColor: '#F3F4F6', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
-                            {ts.vendor_name || 'Unassigned'}
-                        </span>
+                      <span style={{ backgroundColor: '#F3F4F6', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>
+                        {ts.vendor_name || 'Unassigned'}
+                      </span>
                     </td>
                     <td style={styles.td}>
-                      {new Date(ts.period_start || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                      {new Date(cleanStart).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end || cleanStart).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                     </td>
                     <td style={styles.td}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
@@ -384,9 +407,8 @@ export default function AdminDashboard() {
                           padding: '4px 10px', borderRadius: '6px',
                           display: 'inline-block'
                         }}>
-                          {parseFloat(ts.total_hours).toFixed(2)}
+                          {parseFloat(ts.total_hours || 0).toFixed(2)}
                         </span>
-                        
                         {isOvertime && (
                           <span style={{ fontSize: '10px', fontWeight: '800', color: '#DC2626', letterSpacing: '0.05em' }}>
                             ⚠️ OVERTIME
@@ -401,7 +423,7 @@ export default function AdminDashboard() {
                     </td>
                     <td style={styles.td}>
                       <span style={ts.status === 'APPROVED' ? styles.badgeApproved : ts.status === 'REJECTED' ? styles.badgeRejected : styles.badgePending}>
-                        {ts.status}
+                        {ts.status || 'SUBMITTED'}
                       </span>
                     </td>
                     <td style={styles.td} onClick={e => e.stopPropagation()}>
@@ -433,13 +455,13 @@ export default function AdminDashboard() {
             <div style={{ padding: '20px' }}>
               <h3 style={{ margin: '0 0 5px 0' }}>{drawerItem.first_name} {drawerItem.last_name}</h3>
               <p style={{ margin: 0, color: '#6B7280' }}>
-                {new Date(drawerItem.period_start).toLocaleDateString('en-US', { timeZone: 'UTC' })} to {new Date(drawerItem.period_end).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                {new Date(drawerItem.period_start || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })} to {new Date(drawerItem.period_end || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })}
               </p>
               
               <div style={{ backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', marginTop: '20px', textAlign: 'center' }}>
                 <span style={{ fontSize: '14px', color: '#4B5563', textTransform: 'uppercase', fontWeight: 'bold' }}>Total Hours Logged</span>
-                <h1 style={{ margin: '5px 0 0 0', fontSize: '36px', color: parseFloat(drawerItem.total_hours) > 40 ? '#DC2626' : '#111827' }}>
-                  {parseFloat(drawerItem.total_hours).toFixed(2)}
+                <h1 style={{ margin: '5px 0 0 0', fontSize: '36px', color: parseFloat(drawerItem.total_hours || 0) > 40 ? '#DC2626' : '#111827' }}>
+                  {parseFloat(drawerItem.total_hours || 0).toFixed(2)}
                 </h1>
               </div>
 
@@ -448,7 +470,7 @@ export default function AdminDashboard() {
                 {drawerItem.screenshot_urls && drawerItem.screenshot_urls.length > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginTop: '15px' }}>
                     {drawerItem.screenshot_urls.map((url, i) => (
-                      <a key={i} href={url} target="_blank" rel="noreferrer" style={styles.imageCard} className="proof-image-card">
+                      <a key={i} href={url} target="_blank" rel="noreferrer" style={styles.imageCard}>
                         <div style={{ ...styles.imagePreview, backgroundImage: `url('${url}')` }}></div>
                         <div style={{ padding: '10px', fontSize: '12px', color: '#4B5563', textAlign: 'center', backgroundColor: 'white' }}>Image {i+1}</div>
                       </a>
@@ -489,11 +511,11 @@ export default function AdminDashboard() {
                       <span style={{ fontWeight: 'bold', color: '#111827' }}>{ts.first_name} {ts.last_name}</span>
                       <br/>
                       <span style={{ color: '#6B7280', fontSize: '13px' }}>
-                        {new Date(ts.period_start).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end).toLocaleDateString('en-US', { timeZone: 'UTC' })}
+                        {new Date(ts.period_start || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })} - {new Date(ts.period_end || Date.now()).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                       </span>
                     </div>
                     <div style={{ fontWeight: 'bold', color: '#111827' }}>
-                      {ts.total_hours} hrs
+                      {parseFloat(ts.total_hours || 0).toFixed(2)} hrs
                     </div>
                   </div>
                 ))}
@@ -544,12 +566,10 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
 
-// Keep styles exactly as they were written
 const styles = {
   header: { flexShrink: 0, marginBottom: '20px' },
   title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0' },
@@ -558,14 +578,10 @@ const styles = {
   toggleActive: { backgroundColor: 'white', color: '#111827', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.1)', cursor: 'pointer' },
   toggleInactive: { backgroundColor: 'transparent', color: '#6B7280', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' },
   searchInput: { padding: '10px 15px', borderRadius: '8px', border: '1px solid #D1D5DB', width: '200px', fontSize: '14px', outline: 'none' },
-  
   bulkBar: { flexShrink: 0, backgroundColor: '#E0E7FF', padding: '12px 20px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', border: '1px solid #C7D2FE' },
-  
   tableContainer: { flex: 1, minHeight: 0, overflowY: 'auto', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', border: '1px solid #F3F4F6', position: 'relative' },
   table: { width: '100%', borderCollapse: 'collapse', textAlign: 'left' },
-  
   tableHead: { backgroundColor: '#F9FAFB', borderBottom: '2px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 10 },
-  
   th: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px' },
   thSortable: { padding: '15px 20px', color: '#374151', fontWeight: '600', fontSize: '14px', cursor: 'pointer', userSelect: 'none' },
   tableRow: { borderBottom: '1px solid #F3F4F6', cursor: 'pointer' },
@@ -577,14 +593,12 @@ const styles = {
   proofBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '13px' },
   approveBtn: { backgroundColor: '#10B981', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' },
   rejectBtn: { backgroundColor: '#EF4444', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' },
-  
   drawerOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.5)', zIndex: 999, display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(2px)' },
   drawerPanel: { width: '500px', backgroundColor: '#F9FAFB', height: '100%', boxShadow: '-15px 0 30px rgba(0,0,0,0.15)', overflowY: 'auto' },
   drawerHeader: { display: 'flex', justifyContent: 'space-between', padding: '20px', borderBottom: '1px solid #E5E7EB', backgroundColor: '#FFFFFF' },
   closeBtn: { background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#9CA3AF' },
   imageCard: { display: 'block', border: '1px solid #E5E7EB', borderRadius: '12px', overflow: 'hidden', textDecoration: 'none', backgroundColor: 'white' },
   imagePreview: { height: '180px', backgroundColor: '#F3F4F6', backgroundSize: 'cover', backgroundPosition: 'center', borderBottom: '1px solid #E5E7EB' },
-  
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '450px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' },
   modalReceipt: { backgroundColor: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '15px' },
@@ -593,7 +607,6 @@ const styles = {
   muteBox: { display: 'flex', alignItems: 'center', gap: '8px', marginTop: '20px', padding: '10px', backgroundColor: '#F9FAFB', borderRadius: '6px', border: '1px solid #E5E7EB' },
   submitBtn: { color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' },
   cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', flex: 1 },
-
   emptyStateContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', backgroundColor: '#FFFFFF', textAlign: 'center' },
   emptyStateIcon: { width: '64px', height: '64px', color: '#D1D5DB', marginBottom: '20px' },
   emptyStateText: { color: '#374151', fontSize: '20px', fontWeight: '600', margin: '0' }
