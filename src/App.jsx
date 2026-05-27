@@ -88,7 +88,13 @@ export default function Portal() {
       }
     }
 
+    // 👇 FIX: Guard statement against 'undefined' or missing user string context keys
     const targetUid = urlUid || currentUser?.id;
+    if (!targetUid || targetUid === 'undefined') {
+      console.error("Fetch halted: Valid User Identifier UID is missing.");
+      return;
+    }
+
     fetchMyTimesheets(currentUser.email, currentUser.tenant_id, targetUid);
   }, [navigate]);
 
@@ -164,7 +170,7 @@ export default function Portal() {
     setIsSubmitting(true);
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    // FIXED: Switched from localStorage to sessionStorage
+    // FIXED: Switched lookup environment strictly from localStorage to sessionStorage
     const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
 
     try {
@@ -172,7 +178,8 @@ export default function Portal() {
       const endDate = new Date(periodEnd);
 
       const formData = new FormData();
-      formData.append('user_id', user.id);
+      // 👇 FIX: Use clean targetUid fallback to completely eliminate UUID casting runtime mismatch breaks
+      formData.append('user_id', targetUid);
       formData.append('period_start', startDate.toISOString());
       formData.append('period_end', endDate.toISOString());
       formData.append('total_hours', parseFloat(hours));
@@ -221,7 +228,7 @@ export default function Portal() {
     
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    // FIXED: Switched from localStorage to sessionStorage
+    // FIXED: Switched lookup environment strictly from localStorage to sessionStorage
     const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
 
     try {
@@ -233,7 +240,7 @@ export default function Portal() {
           'Authorization': `Bearer ${userSpecificToken}`
         },
         body: JSON.stringify({ 
-          userId: user.id, 
+          userId: targetUid, // 👇 FIX: Adjusted fallback token scope parameter targeting structure alignment
           oldPassword: passwordData.oldPassword, 
           newPassword: passwordData.newPassword 
         })
