@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+// 🔥 FIX 1: Import the shared structural context hook
+import { useOutletContext } from 'react-router-dom';
 
 // SMART CALCULATOR: Determines total US working hours using LIVE API Data
 const getExpectedMonthlyHours = (periodStart, apiHolidays = []) => {
@@ -27,6 +29,10 @@ const getExpectedMonthlyHours = (periodStart, apiHolidays = []) => {
 };
 
 export default function AdminDashboard() {
+  // 🔥 FIX 2: Intercept the parent context attributes safely right here
+  const { adminUser, adminToken } = useOutletContext();
+  const currentTenantId = adminUser?.tenant_id;
+
   const [timesheets, setTimesheets] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -49,20 +55,16 @@ export default function AdminDashboard() {
   const [muteApprovals, setMuteApprovals] = useState(sessionStorage.getItem('muteApprovals') === 'true');
   const [tempMuteCheck, setTempMuteCheck] = useState(false);
 
-  // 🛡️ Safe context validation state hook configuration
-  const adminUser = JSON.parse(localStorage.getItem('leodoesit_user'));
-  const currentTenantId = adminUser?.tenant_id;
-
   useEffect(() => {
-    // 🛡️ FRONTEND GUARDRAIL: Intercept the execution path immediately if context layout boundaries lag
-    if (!currentTenantId || currentTenantId === 'undefined' || currentTenantId === 'null') {
+    // Front-end security frame sentinel
+    if (!currentTenantId || !adminToken) {
       setLoading(false);
       return;
     }
 
     fetchTimesheets(currentTenantId);
     fetchLiveHolidays(); 
-  }, [currentTenantId]); // Gracefully tracks context stability transitions
+  }, [currentTenantId, adminToken]);
 
   useEffect(() => {
     setSelectedIds([]);
@@ -93,7 +95,12 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets`, {
-        headers: { 'x-tenant-id': tenantId } 
+        headers: { 
+          // 🔥 FIX 3: Append full dynamic Bearer authorization properties 
+          'x-tenant-id': tenantId,
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json'
+        } 
       });
       const data = await response.json();
       if (data.success) {
@@ -143,6 +150,7 @@ export default function AdminDashboard() {
   };
 
   const executeBackendAction = async (action, targetArray, reason = '') => {
+    // Optimistic UI updates setup
     setTimesheets(prevTimesheets => prevTimesheets.map(ts => {
       if (targetArray.includes(ts.id)) {
         return { ...ts, status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' };
@@ -155,11 +163,24 @@ export default function AdminDashboard() {
     try {
       for (let id of targetArray) {
         if (action === 'APPROVE') {
-          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/approve`, { method: 'PUT' });
+          await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/approve`, { 
+            method: 'PUT',
+            // 🔥 FIX 4: Add required multi-tenant validation metadata flags here
+            headers: {
+              'x-tenant-id': currentTenantId,
+              'Authorization': `Bearer ${adminToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
         } else if (action === 'REJECT') {
           await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/${id}/reject`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            // 🔥 FIX 5: Mirror authorization settings on rejection routes
+            headers: { 
+              'x-tenant-id': currentTenantId,
+              'Authorization': `Bearer ${adminToken}`,
+              'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({ rejection_reason: reason })
           });
         }
@@ -528,6 +549,7 @@ export default function AdminDashboard() {
   );
 }
 
+// Keep styles exactly as they were written
 const styles = {
   header: { flexShrink: 0, marginBottom: '20px' },
   title: { fontSize: '28px', color: '#111827', margin: '0 0 5px 0' },
