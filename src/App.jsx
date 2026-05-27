@@ -112,6 +112,7 @@ export default function Portal() {
   
     const currentUser =
       JSON.parse(userString);
+      console.log("CURRENT USER:", currentUser);
   
     setUser(currentUser);
   
@@ -174,24 +175,101 @@ export default function Portal() {
   }, [navigate]);
 
   // 🛠️ STEP 4 FIX: Target user-keyed local token parameters safely inside fetch routing logic
-  const fetchMyTimesheets = async (email, tenantId, uid) => {
-    // FIXED: Changed targetUid to uid to match function signature scope
-    const userSpecificToken = sessionStorage.getItem(`token_${uid}`);
+  const fetchMyTimesheets = async (
+    email,
+    tenantId,
+    uid
+  ) => {
+  
+    // =========================
+    // VALIDATION
+    // =========================
+  
+    if (!tenantId) {
+  
+      console.error(
+        "Tenant ID missing"
+      );
+  
+      return;
+    }
+  
+    if (!uid) {
+  
+      console.error(
+        "UID missing"
+      );
+  
+      return;
+    }
+  
+    // =========================
+    // GET TOKEN
+    // =========================
+  
+    const userSpecificToken =
+      sessionStorage.getItem(
+        `token_${uid}`
+      );
+  
+    if (!userSpecificToken) {
+  
+      console.error(
+        "Token missing"
+      );
+  
+      return;
+    }
+  
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/me/${email}`, {
-        headers: { 
-          'x-tenant-id': tenantId,
-          'Authorization': `Bearer ${userSpecificToken}`
+  
+      const response = await fetch(
+  
+        `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/timesheets/me/${email}`,
+  
+        {
+          headers: {
+  
+            'x-tenant-id': tenantId,
+  
+            'Authorization':
+              `Bearer ${userSpecificToken}`
+  
+          }
         }
-      });
-      const data = await response.json();
+  
+      );
+  
+      const data =
+        await response.json();
+  
       if (data.success) {
-        setTimesheets(Array.isArray(data.data) ? data.data : (data.data ? [data.data] : []));
+  
+        setTimesheets(
+  
+          Array.isArray(data.data)
+            ? data.data
+            : (data.data ? [data.data] : [])
+  
+        );
+  
+      } else {
+  
+        console.error(data.error);
+  
       }
+  
     } catch (error) {
-      console.error("Failed to fetch status.");
+  
+      console.error(
+        "Failed to fetch timesheets:",
+        error
+      );
+  
     } finally {
+  
       setLoading(false);
+  
     }
   };
 
