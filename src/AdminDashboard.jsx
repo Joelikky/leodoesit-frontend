@@ -409,6 +409,23 @@ export default function AdminDashboard() {
                         }}>
                           {parseFloat(ts.total_hours || 0).toFixed(2)}
                         </span>
+                        
+                        {/* 🔥 AUTOMATED OCR INTEGRATION FILE MISMATCH ALIGNMENT BADGE */}
+                        {ts.ocr_hours !== null && ts.ocr_mismatch && (
+                          <span style={{ 
+                            fontSize: '11px', 
+                            fontWeight: 'bold', 
+                            color: '#EA580C', 
+                            backgroundColor: '#FFEDD5', 
+                            padding: '2px 8px', 
+                            borderRadius: '4px',
+                            marginTop: '2px',
+                            border: '1px solid #FED7AA'
+                          }} onClick={e => e.stopPropagation()} title={`The parsed structural background log tracked ${ts.ocr_hours} hours inside this attachment.`}>
+                            ⚠️ File Mismatch ({parseFloat(ts.ocr_hours).toFixed(1)} hrs)
+                          </span>
+                        )}
+
                         {isOvertime && (
                           <span style={{ fontSize: '10px', fontWeight: '800', color: '#DC2626', letterSpacing: '0.05em' }}>
                             ⚠️ OVERTIME
@@ -464,6 +481,21 @@ export default function AdminDashboard() {
                   {parseFloat(drawerItem.total_hours || 0).toFixed(2)}
                 </h1>
               </div>
+
+              {/* 🔥 EXTRA METADATA INSIGHT BLOCK INSIDE DETAILED VIEW DRAWER PANEL */}
+              {drawerItem.ocr_hours !== null && (
+                <div style={{ backgroundColor: drawerItem.ocr_mismatch ? '#FFF7ED' : '#F0FDF4', border: `1px solid ${drawerItem.ocr_mismatch ? '#FFEDD5' : '#DCFCE7'}`, padding: '12px', borderRadius: '8px', marginTop: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', color: drawerItem.ocr_mismatch ? '#C2410C' : '#15803D', fontWeight: 'bold', textTransform: 'uppercase' }}>Automated Document Scan</span>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '14px', color: '#374151' }}>
+                      {drawerItem.ocr_mismatch ? '❌ Variance anomaly caught in file content.' : '✅ Extracted content matches text payload.'}
+                    </p>
+                  </div>
+                  <div style={{ textAlign: 'right', fontWeight: 'bold', color: drawerItem.ocr_mismatch ? '#EA580C' : '#16a34a', fontSize: '16px', fontFamily: 'monospace' }}>
+                    {parseFloat(drawerItem.ocr_hours).toFixed(2)} hrs
+                  </div>
+                </div>
+              )}
 
               <div style={{ marginTop: '30px' }}>
                 <h4 style={{ borderBottom: '1px solid #E5E7EB', paddingBottom: '10px' }}>Attached Proof of Work</h4>
