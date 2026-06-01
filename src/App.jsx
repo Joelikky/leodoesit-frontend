@@ -69,7 +69,8 @@ export default function Portal() {
       return;
     }
   
-    const userString = sessionStorage.getItem(`user_${urlUid}`);
+    // 🛡️ MULTI-TIER SESSION PARSE: Checks uid session space first, then falls back to local user blocks
+    let userString = sessionStorage.getItem(`user_${urlUid}`) || localStorage.getItem('user');
   
     if (!userString) {
       console.error("User session missing");
@@ -78,6 +79,28 @@ export default function Portal() {
     }
   
     const currentUser = JSON.parse(userString);
+    
+    // 🔥 ROBUST BACKUP LAYER: If names are blank inside session keys, extract text values from token mapping context
+    if (!currentUser.first_name || currentUser.first_name === 'undefined') {
+      const userSpecificToken = sessionStorage.getItem(`token_${urlUid}`) || localStorage.getItem('token');
+      if (userSpecificToken) {
+        try {
+          // Decode signed token base64 chunk string data
+          const base64Url = userSpecificToken.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(c => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const decodedToken = JSON.parse(jsonPayload);
+          currentUser.first_name = decodedToken.firstName || currentUser.name?.split(' ')[0] || 'Contractor';
+          currentUser.last_name = decodedToken.lastName || currentUser.name?.split(' ')[1] || 'Profile';
+        } catch (e) {
+          console.error("Failed parsing fallback identity maps from active JWT payload data structures:", e);
+        }
+      }
+    }
+
     setUser(currentUser);
   
     if (currentUser.tenant_name) {
@@ -94,7 +117,7 @@ export default function Portal() {
       }
     }
   
-    // 🛡️ FRONTEND GUARDRAIL: Intercept malformed string conversions before dispatching
+    // 🛡️ FRONTEND GUARDRAIL
     if (currentUser.tenant_id && currentUser.tenant_id !== 'undefined' && currentUser.tenant_id !== 'null') {
       fetchMyTimesheets(currentUser.email, currentUser.tenant_id, urlUid);
     } else {
@@ -114,7 +137,7 @@ export default function Portal() {
       return;
     }
 
-    const userSpecificToken = sessionStorage.getItem(`token_${uid}`);
+    const userSpecificToken = sessionStorage.getItem(`token_${uid}`) || localStorage.getItem('token');
   
     if (!userSpecificToken) {
       console.error("Token missing");
@@ -202,7 +225,7 @@ export default function Portal() {
     setIsSubmitting(true);
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
+    const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`) || localStorage.getItem('token');
 
     try {
       const startDate = new Date(periodStart);
@@ -258,7 +281,7 @@ export default function Portal() {
     
     const queryParams = new URLSearchParams(window.location.search);
     const targetUid = queryParams.get('uid') || user?.id;
-    const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`);
+    const userSpecificToken = sessionStorage.getItem(`token_${targetUid}`) || localStorage.getItem('token');
 
     try {
       setIsSubmitting(true);
@@ -297,6 +320,8 @@ export default function Portal() {
   
     sessionStorage.removeItem(`token_${targetUid}`);
     sessionStorage.removeItem(`user_${targetUid}`);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
   
     document.title = "Portal Login";
     changeBrowserIcon('/vite.svg');
@@ -335,11 +360,14 @@ export default function Portal() {
                 style={{ height: 'auto', maxHeight: '30px', objectFit: 'contain', display: 'block' }} 
               />
             </div>
-            <span style={{...styles.portalBadge, backgroundColor: themeColor}}>Contractor Portal</span>
+            {/* 🔥 FIXED LOGIC BADGE: Shows name parameter greets right alongside status container flags */}
+            <span style={{...styles.portalBadge, backgroundColor: themeColor}}>
+              {user.first_name && user.first_name !== 'Contractor' ? `Welcome, ${user.first_name} ${user.last_name || ''}` : 'Contractor Portal'}
+            </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '5px' }}>
-            <span style={styles.userInfo}>{user.first_name} {user.last_name}</span>
+            <span style={styles.userInfo}>👤 {user.first_name} {user.last_name}</span>
             <button onClick={() => setIsPasswordModalOpen(true)} style={styles.changePassBtn}>
               Password
             </button>
@@ -563,7 +591,7 @@ const styles = {
   nav: { backgroundColor: '#111827', padding: '10px 0', width: '100%' },
   navContent: { maxWidth: '1000px', margin: '0 auto', padding: '0 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', boxSizing: 'border-box' },
   logoBadge: { backgroundColor: 'white', padding: '6px 10px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  portalBadge: { color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.5px', whiteSpace: 'nowrap' },
+  portalBadge: { color: 'white', padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 'bold', letterSpacing: '0.5px', whiteSpace: 'nowrap' },
   changePassBtn: { backgroundColor: 'transparent', color: '#D1D5DB', border: '1px solid #4B5563', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
   userInfo: { color: '#D1D5DB', fontSize: '13px', fontWeight: '500' },
   logoutBtn: { backgroundColor: 'transparent', color: '#9CA3AF', border: '1px solid #4B5563', padding: '6px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' },
