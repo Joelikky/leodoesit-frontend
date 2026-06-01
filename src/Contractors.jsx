@@ -22,6 +22,9 @@ export default function Contractors() {
 
   const currentTenantId = adminUser?.tenant_id;
 
+  // 🔥 DYNAMIC WELCOME BANNER TARGET: Safely extract admin name parameter maps
+  const adminName = adminUser?.name || adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}`.trim() : 'Administrator';
+
   const [contractors, setContractors] = useState([]);
   const [invoices, setInvoices] = useState([]); 
   const [clients, setClients] = useState([]);
@@ -258,7 +261,7 @@ export default function Contractors() {
     isEdit ? setEditFormData({ ...editFormData, ...updates }) : setFormData({ ...formData, ...updates });
   };
 
-  const handleSubVendorSelect = (e, isEdit = false) => {
+  const handleSidebarSelect = (e, isEdit = false) => {
     const selectedName = e.target.value;
     const selectedSV = subVendors.find(sv => sv.company_name === selectedName);
     const updates = {
@@ -459,6 +462,23 @@ export default function Contractors() {
           )}
         </div>
       </div>
+
+      {/* 🔥 NEW: Persistent Dynamic Admin Greeting Banner Panel */}
+      {!showArchive && (
+        <div style={styles.welcomeBanner}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={styles.avatarBlob}>👑</div>
+            <div>
+              <h2 style={styles.welcomeText}>
+                Welcome back, <span style={{ color: '#4F46E5' }}>{adminName}</span>
+              </h2>
+              <p style={styles.welcomeSubtext}>
+                Admin Panel Operational • Connected Tenant Domain: <strong style={{ color: '#374151' }}>{adminUser?.tenant_name || adminUser?.tenant_prefix || 'Leodoes IT Platform'}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Advanced Filter Panel */}
       {showFilters && !showArchive && (
@@ -695,7 +715,7 @@ export default function Contractors() {
                   <div style={{ backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', marginTop: '15px', borderLeft: '4px solid #4F46E5' }}>
                       <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>Corp-to-Corp (C2C) Information</h4>
                       <div style={styles.formGrid}>
-                          <select required name="c2c_name" value={formData.c2c_name || ''} onChange={(e) => handleSubVendorSelect(e, false)} style={{ ...styles.input, gridColumn: 'span 2' }}>
+                          <select required name="c2c_name" value={formData.c2c_name || ''} onChange={(e) => handleSidebarSelect(e, false)} style={{ ...styles.input, gridColumn: 'span 2' }}>
                             <option value="">-- Select Sub Vendor --</option>
                             {subVendors.map(sv => (<option key={sv.id} value={sv.company_name}>{sv.company_name}</option>))}
                           </select>
@@ -817,7 +837,7 @@ export default function Contractors() {
                   <div style={{ backgroundColor: '#F3F4F6', padding: '15px', borderRadius: '8px', marginTop: '15px', borderLeft: '4px solid #4F46E5' }}>
                       <h4 style={{ margin: '0 0 10px 0', color: '#374151' }}>Corp-to-Corp (C2C) Information</h4>
                       <div style={styles.formGrid}>
-                          <select required name="c2c_name" value={editFormData.c2c_name || ''} onChange={(e) => handleSubVendorSelect(e, true)} style={{ ...styles.input, gridColumn: 'span 2' }}>
+                          <select required name="c2c_name" value={editFormData.c2c_name || ''} onChange={(e) => handleSidebarSelect(e, true)} style={{ ...styles.input, gridColumn: 'span 2' }}>
                             <option value="">-- Select Sub Vendor --</option>
                             {subVendors.map(sv => (<option key={sv.id} value={sv.company_name}>{sv.company_name}</option>))}
                           </select>
@@ -1054,6 +1074,12 @@ const styles = {
   title: { fontSize: '26px', color: '#111827', margin: '0 0 5px 0', fontWeight: '700' },
   subtitle: { color: '#6B7280', margin: 0, fontSize: '14px' },
   
+  // 🔥 NEW: Welcome Banner CSS Styling Rules
+  welcomeBanner: { backgroundColor: '#ffffff', padding: '16px 20px', borderRadius: '12px', border: '1px solid #E5E7EB', marginBottom: '25px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' },
+  avatarBlob: { width: '42px', height: '42px', backgroundColor: '#EEF2FF', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' },
+  welcomeText: { fontSize: '18px', color: '#111827', margin: '0 0 2px 0', fontWeight: '700' },
+  welcomeSubtext: { fontSize: '13px', color: '#6B7280', margin: 0 },
+
   kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px', width: '100%' },
   kpiCard: { position: 'relative', padding: '20px', borderRadius: '12px', color: 'white', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
   kpiTitle: { fontSize: '13px', fontWeight: 'bold', margin: '0 0 8px 0', zIndex: 2, position: 'relative' },
