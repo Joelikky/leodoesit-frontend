@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -9,7 +9,7 @@ export default function Login() {
 
   const navigate = useNavigate();
 
-  // 🔥 FIX 1: Evaluate multi-tenant path routing context alongside real-time input fields
+  // Evaluate multi-tenant path routing context alongside real-time input fields
   const currentPath = window.location.pathname.toLowerCase();
   
   const isGandiva = 
@@ -21,7 +21,7 @@ export default function Login() {
   const themeColor = isGandiva ? '#4F46E5' : '#10B981';
   const companyName = isGandiva ? 'Gandiva Insights' : 'Leodoes It';
 
-  // 🔥 FIX 2: Dynamic title-bar and tab updates reflecting the active tenant workspace
+  // Dynamic title-bar and tab updates reflecting the active tenant workspace
   useEffect(() => {
     document.title = `${companyName} Portal Login`;
     
@@ -94,8 +94,9 @@ export default function Login() {
           {/* Highlight top branding border accent dynamically */}
           <div style={{ ...styles.topAccentBar, backgroundColor: themeColor }} />
 
-          <h1 style={{ ...styles.logo, color: themeColor }}>{companyName}</h1>
-          <p style={styles.tagline}>Enterprise Billing & Timesheet Engine</p>
+          {/* ========================================================================= */}
+          {/* 🔥 BRANDING REDACTION FIXED: Extraneous brand text layouts removed completely */}
+          {/* ========================================================================= */}
 
           <h2 style={styles.title}>Welcome Back</h2>
           <p style={styles.subtitle}>Enter your work email to access your portal.</p>
@@ -177,23 +178,6 @@ const styles = {
     justifyContent: 'center',
     padding: '20px'
   },
-  logo: {
-    fontSize: '36px',
-    margin: '0 0 5px 0',
-    letterSpacing: '-1px',
-    fontWeight: '800',
-    textAlign: 'center',
-    transition: 'color 0.4s ease'
-  },
-  tagline: {
-    fontSize: '14px',
-    color: '#94A3B8',
-    margin: '0 0 30px 0',
-    fontWeight: '500',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: '1px'
-  },
   loginBox: {
     position: 'relative',
     backgroundColor: 'white',
@@ -203,7 +187,9 @@ const styles = {
     width: '100%',
     maxWidth: '480px',
     boxSizing: 'border-box',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    // Generates a clean top margin spacing adjustment due to missing brand row
+    paddingTop: '45px'
   },
   topAccentBar: {
     position: 'absolute',
