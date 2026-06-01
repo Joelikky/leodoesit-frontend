@@ -17,13 +17,11 @@ export default function Login() {
     email.toLowerCase().includes('gandiva');
 
   const portal = isGandiva ? 'gandiva' : 'leodoesit';
-
   const themeColor = isGandiva ? '#4F46E5' : '#10B981';
-  const companyName = isGandiva ? 'Gandiva Insights' : 'Leodoes It';
 
-  // Dynamic title-bar and tab updates reflecting the active tenant workspace
+  // 🔥 FIXED: Explicitly sets the browser tab title bar string to "HR Automation"
   useEffect(() => {
-    document.title = `${companyName} Portal Login`;
+    document.title = "HR Automation";
     
     // Dynamically toggle default tab favicons safely
     let link = document.querySelector("link[rel~='icon']");
@@ -33,7 +31,7 @@ export default function Login() {
       document.head.appendChild(link);
     }
     link.href = '/vite.svg';
-  }, [companyName]);
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -93,10 +91,6 @@ export default function Login() {
         <div style={styles.loginBox}>
           {/* Highlight top branding border accent dynamically */}
           <div style={{ ...styles.topAccentBar, backgroundColor: themeColor }} />
-
-          {/* ========================================================================= */}
-          {/* 🔥 BRANDING REDACTION FIXED: Extraneous brand text layouts removed completely */}
-          {/* ========================================================================= */}
 
           <h2 style={styles.title}>Welcome Back</h2>
           <p style={styles.subtitle}>Enter your work email to access your portal.</p>
@@ -188,7 +182,6 @@ const styles = {
     maxWidth: '480px',
     boxSizing: 'border-box',
     overflow: 'hidden',
-    // Generates a clean top margin spacing adjustment due to missing brand row
     paddingTop: '45px'
   },
   topAccentBar: {
