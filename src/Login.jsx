@@ -17,9 +17,11 @@ export default function Login() {
     email.toLowerCase().includes('gandiva');
 
   const portal = isGandiva ? 'gandiva' : 'leodoesit';
-  const themeColor = isGandiva ? '#4F46E5' : '#10B981';
+  
+  // 🔥 UPDATED: Shifted non-Gandiva/Leodoesit default theme hex parameter from emerald green to brand orange
+  const themeColor = isGandiva ? '#4F46E5' : '#FF6B00';
 
-  // 🔥 FIXED: Explicitly sets the browser tab title bar string to "HR Automation"
+  // Explicitly sets the browser tab title bar string to "HR Automation"
   useEffect(() => {
     document.title = "HR Automation";
     
