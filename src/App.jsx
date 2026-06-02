@@ -260,9 +260,13 @@ export default function Portal() {
         
         const fileInput = document.getElementById('file-upload-input');
         if (fileInput) fileInput.value = '';
-
+// 🔥 NEW: Check if the backend detected an hours mismatch
+if (data.ocrMismatchDetected) {
+  alert(`⚠️ Timesheet submitted, but our automated system noticed a difference!\n\nYou entered ${hours} hours, but the uploaded document appears to show ${data.extractedOcrHours} hours. Your manager has been notified to review it.`);
+} else {
         alert("✅ Timesheet and files submitted successfully!");
-      } else {
+      }
+     } else {
         alert("❌ Failed to submit: " + data.error);
       }
     } catch (error) {
