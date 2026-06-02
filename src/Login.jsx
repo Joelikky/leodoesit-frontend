@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // 🔥 State to track password visibility
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -18,7 +19,7 @@ export default function Login() {
 
   const portal = isGandiva ? 'gandiva' : 'leodoesit';
   
-  // 🔥 UPDATED: Shifted non-Gandiva/Leodoesit default theme hex parameter from emerald green to brand orange
+  // Shifted non-Gandiva/Leodoesit default theme hex parameter from emerald green to brand orange
   const themeColor = isGandiva ? '#4F46E5' : '#FF6B00';
 
   // Explicitly sets the browser tab title bar string to "HR Automation"
@@ -126,15 +127,26 @@ export default function Login() {
             {/* Password */}
             <div style={styles.inputGroup}>
               <label style={styles.label}>Password</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
-                required
-                disabled={isLoading}
-              />
+              {/* Wrapped in a relative container to overlay the absolute toggle button toggle options */}
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  type={showPassword ? "text" : "password"} // 🔥 Dynamic layout assignment rule matching state
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{ ...styles.input, paddingRight: '45px' }} // Spaced right edge padding to keep text from masking behind button
+                  required
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={styles.toggleVisibilityBtn}
+                  tabIndex="-1" // Skips tab navigation focus rules safely
+                >
+                  {showPassword ? '👁️' : '🙈'}
+                </button>
+              </div>
             </div>
 
             {/* Button */}
@@ -156,103 +168,18 @@ export default function Login() {
 }
 
 const styles = {
-  container: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    display: 'flex',
-    fontFamily: 'system-ui, sans-serif',
-    backgroundColor: '#F3F4F6',
-    overflow: 'hidden'
-  },
-  rightPanel: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '20px'
-  },
-  loginBox: {
-    position: 'relative',
-    backgroundColor: 'white',
-    padding: '40px 50px',
-    borderRadius: '16px',
-    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-    width: '100%',
-    maxWidth: '480px',
-    boxSizing: 'border-box',
-    overflow: 'hidden',
-    paddingTop: '45px'
-  },
-  topAccentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '5px',
-    transition: 'background-color 0.4s ease'
-  },
-  title: {
-    fontSize: '24px',
-    margin: '0 0 6px 0',
-    color: '#111827',
-    fontWeight: '700'
-  },
-  subtitle: {
-    color: '#6B7280',
-    margin: '0 0 25px 0',
-    fontSize: '15px'
-  },
-  errorBox: {
-    backgroundColor: '#FEF2F2',
-    color: '#B91C1C',
-    padding: '12px',
-    borderRadius: '8px',
-    marginBottom: '20px',
-    fontSize: '14px',
-    border: '1px solid #FECACA',
-    fontWeight: '500'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  inputGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px'
-  },
-  label: {
-    fontSize: '12px',
-    fontWeight: '700',
-    color: '#4B5563',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px'
-  },
-  input: {
-    padding: '12px 16px',
-    borderRadius: '8px',
-    fontSize: '15px',
-    backgroundColor: '#F9FAFB',
-    border: '1px solid #D1D5DB',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box',
-    transition: 'all 0.3s ease'
-  },
-  button: {
-    color: 'white',
-    border: 'none',
-    padding: '14px',
-    borderRadius: '8px',
-    fontSize: '16px',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    marginTop: '10px',
-    width: '100%',
-    transition: 'background 0.4s ease'
-  }
+  container: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', fontFamily: 'system-ui, sans-serif', backgroundColor: '#F3F4F6', overflow: 'hidden' },
+  rightPanel: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
+  loginBox: { position: 'relative', backgroundColor: 'white', padding: '40px 50px', borderRadius: '16px', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', width: '100%', maxWidth: '480px', boxSizing: 'border-box', overflow: 'hidden', paddingTop: '45px' },
+  topAccentBar: { position: 'absolute', top: 0, left: 0, right: 0, height: '5px', transition: 'background-color 0.4s ease' },
+  title: { fontSize: '24px', margin: '0 0 6px 0', color: '#111827', fontWeight: '700' },
+  subtitle: { color: '#6B7280', margin: '0 0 25px 0', fontSize: '15px' },
+  errorBox: { backgroundColor: '#FEF2F2', color: '#B91C1C', padding: '12px', borderRadius: '8px', marginBottom: '20px', fontSize: '14px', border: '1px solid #FECACA', fontWeight: '500' },
+  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '6px' },
+  label: { fontSize: '12px', fontWeight: '700', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
+  input: { padding: '12px 16px', borderRadius: '8px', fontSize: '15px', backgroundColor: '#F9FAFB', border: '1px solid #D1D5DB', outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'all 0.3s ease' },
+  button: { color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', width: '100%', transition: 'background 0.4s ease' },
+  // 🔥 Inline absolute visibility toggle alignment rules
+  toggleVisibilityBtn: { position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, height: '100%', userSelect: 'none' }
 };
