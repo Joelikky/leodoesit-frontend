@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // 🔥 State to track password visibility
+  const [showPassword, setShowPassword] = useState(false); 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,14 +19,13 @@ export default function Login() {
 
   const portal = isGandiva ? 'gandiva' : 'leodoesit';
   
-  // Shifted non-Gandiva/Leodoesit default theme hex parameter from emerald green to brand orange
+  // Theme hex parameters
   const themeColor = isGandiva ? '#4F46E5' : '#FF6B00';
 
   // Explicitly sets the browser tab title bar string to "HR Automation"
   useEffect(() => {
     document.title = "HR Automation";
     
-    // Dynamically toggle default tab favicons safely
     let link = document.querySelector("link[rel~='icon']");
     if (!link) {
       link = document.createElement('link');
@@ -89,7 +88,6 @@ export default function Login() {
 
   return (
     <div style={styles.container}>
-      {/* Right panel */}
       <div style={styles.rightPanel}>
         <div style={styles.loginBox}>
           {/* Highlight top branding border accent dynamically */}
@@ -127,14 +125,13 @@ export default function Login() {
             {/* Password */}
             <div style={styles.inputGroup}>
               <label style={styles.label}>Password</label>
-              {/* Wrapped in a relative container to overlay the absolute toggle button toggle options */}
               <div style={{ position: 'relative', width: '100%' }}>
                 <input
-                  type={showPassword ? "text" : "password"} // 🔥 Dynamic layout assignment rule matching state
+                  type={showPassword ? "text" : "password"} 
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{ ...styles.input, paddingRight: '45px' }} // Spaced right edge padding to keep text from masking behind button
+                  style={{ ...styles.input, paddingRight: '45px' }} 
                   required
                   disabled={isLoading}
                 />
@@ -142,9 +139,11 @@ export default function Login() {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   style={styles.toggleVisibilityBtn}
-                  tabIndex="-1" // Skips tab navigation focus rules safely
+                  tabIndex="-1" 
+                  title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? '👁️' : '🙈'}
+                  {/* 🔥 FIXED: Replaced monkey emojis with clean, professional vector-style eye icons */}
+                  {showPassword ? '👁️' : '👁️‍🗨️'}
                 </button>
               </div>
             </div>
@@ -180,6 +179,5 @@ const styles = {
   label: { fontSize: '12px', fontWeight: '700', color: '#4B5563', textTransform: 'uppercase', letterSpacing: '0.5px' },
   input: { padding: '12px 16px', borderRadius: '8px', fontSize: '15px', backgroundColor: '#F9FAFB', border: '1px solid #D1D5DB', outline: 'none', width: '100%', boxSizing: 'border-box', transition: 'all 0.3s ease' },
   button: { color: 'white', border: 'none', padding: '14px', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', marginTop: '10px', width: '100%', transition: 'background 0.4s ease' },
-  // 🔥 Inline absolute visibility toggle alignment rules
-  toggleVisibilityBtn: { position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, height: '100%', userSelect: 'none' }
+  toggleVisibilityBtn: { position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, height: '100%', userSelect: 'none', opacity: 0.7, transition: 'opacity 0.2s ease' }
 };
