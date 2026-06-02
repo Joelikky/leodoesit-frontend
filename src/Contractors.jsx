@@ -20,20 +20,7 @@ export default function Contractors() {
     adminToken = sessionStorage.getItem(`token_${currentUid}`) || sessionStorage.getItem('leodoesit_token');
   }
 
-  const currentTenantId = adminUser?.tenant_id || adminUser?.data?.tenant_id;
-
-  // =========================================================================
-  // 🔥 FOOLPROOF PROFILE DATA PARSING BLOCKS
-  // Dynamically checks for both camelCase, snake_case, and combined template 
-  // literals coming from your user data states.
-  // =========================================================================
-  const adminName = (
-    adminUser?.name || 
-    adminUser?.data?.name ||
-    (adminUser?.first_name ? `${adminUser.first_name} ${adminUser.last_name || ''}` : null) ||
-    (adminUser?.data?.first_name ? `${adminUser.data.first_name} ${adminUser.data.last_name || ''}` : null) ||
-    'Administrator'
-  ).trim();
+  const currentTenantId = adminUser?.tenant_id;
 
   const [contractors, setContractors] = useState([]);
   const [invoices, setInvoices] = useState([]); 
@@ -473,22 +460,9 @@ export default function Contractors() {
         </div>
       </div>
 
-      {/* 🔥 Persistent Dynamic Admin Greeting Banner Panel */}
-      {!showArchive && (
-        <div style={styles.welcomeBanner}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={styles.avatarBlob}>👑</div>
-            <div>
-              <h2 style={styles.welcomeText}>
-                Welcome back, <span style={{ color: '#4F46E5' }}>{adminName}</span>
-              </h2>
-              <p style={styles.welcomeSubtext}>
-                Admin Panel Operational • Connected Tenant Domain: <strong style={{ color: '#374151' }}>{adminUser?.tenant_name || adminUser?.data?.tenant_name || adminUser?.tenant_prefix || adminUser?.data?.tenant_prefix || 'Platform Workspace'}</strong>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ========================================================================= */}
+      {/* 🔥 BRANDING REDACTION FIXED: Greeting component element container removed */}
+      {/* ========================================================================= */}
 
       {/* Advanced Filter Panel */}
       {showFilters && !showArchive && (
@@ -885,11 +859,11 @@ export default function Contractors() {
                 <input type="text" name="net_terms" value={editFormData.net_terms || ''} placeholder="Net Terms (Auto)" readOnly style={{...styles.input, backgroundColor: '#E5E7EB', cursor: 'not-allowed'}} />
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', color: '#6B7280', fontStyle: 'normal' }}>Project Start Date</label>
+                    <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Project Start Date</label>
                     <input type="date" name="project_start_date" value={editFormData.project_start_date || ''} onChange={handleEditChange} style={styles.input} />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '12px', color: '#6B7280', fontStyle: 'normal' }}>Project End Date</label>
+                    <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: 'bold' }}>Project End Date</label>
                     <input type="date" name="project_end_date" value={editFormData.project_end_date || ''} onChange={handleEditChange} style={styles.input} />
                 </div>
                 
