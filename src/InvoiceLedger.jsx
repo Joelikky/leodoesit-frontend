@@ -138,7 +138,9 @@ export default function InvoiceLedger() {
             const remainingBalance = parseFloat(inv.amount_invoiced || 0) - currentPaid;
             const addedPayment = partialAmount ? parseFloat(partialAmount) : remainingBalance;
             const newTotalPaid = currentPaid + addedPayment;
-            const newStatus = newTotalPaid >= parseFloat(inv.amount_invoiced || 0) ? 'PAID' : 'PARTIAL';
+            
+            // Fixed: Changed local tracking string 'PARTIAL' to 'PARTIALLY PAID'
+            const newStatus = newTotalPaid >= parseFloat(inv.amount_invoiced || 0) ? 'PAID' : 'PARTIALLY PAID';
             return { ...inv, status: newStatus, amount_paid: newTotalPaid };
           }
         }
@@ -155,7 +157,6 @@ export default function InvoiceLedger() {
         let res; 
         if (action === 'EMAIL') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/send`, 'POST');        
         if (action === 'PAY') {
-          // If no specific value is provided, compute the remainder target for execution
           let payloadAmount = paymentAmount ? parseFloat(paymentAmount) : null;
           if (!payloadAmount) {
             const currentInvoiceObj = safeInvoices.find(inv => inv.id === id);
@@ -246,15 +247,17 @@ export default function InvoiceLedger() {
   const isNetCredit = totalOutstanding < 0;
   const displayOutstanding = Math.abs(totalOutstanding);
 
+  // Fixed: Updated match from 'PARTIAL' to 'PARTIALLY PAID'
   const counts = {
     ALL: fullyFilteredInvoices.length,
-    UNPAID: fullyFilteredInvoices.filter(i => i.status === 'UNPAID' || i.status === 'PARTIAL').length,
+    UNPAID: fullyFilteredInvoices.filter(i => i.status === 'UNPAID' || i.status === 'PARTIALLY PAID').length,
     PAID: fullyFilteredInvoices.filter(i => i.status === 'PAID').length
   };
 
   // 🔥 3. TABLE TAB SELECTION
+  // Fixed: Updated filter query from 'PARTIAL' to 'PARTIALLY PAID'
   let tableInvoices = fullyFilteredInvoices.filter(inv => {
-    if (activeTab === 'UNPAID') return inv.status === 'UNPAID' || inv.status === 'PARTIAL';
+    if (activeTab === 'UNPAID') return inv.status === 'UNPAID' || inv.status === 'PARTIALLY PAID';
     if (activeTab === 'PAID') return inv.status === 'PAID';
     return true; 
   });
@@ -296,6 +299,7 @@ export default function InvoiceLedger() {
 
   const uniqueVendors = Array.from(new Set(safeInvoices.map(inv => inv.client_name).filter(Boolean))).sort();
 
+  // Fixed: Updated layout styles check from 'PARTIAL' to 'PARTIALLY PAID'
   const getBadgeStyle = (inv) => {
     if (inv.status === 'PAID') {
       const invoiced = parseFloat(inv.amount_invoiced || 0);
@@ -303,15 +307,16 @@ export default function InvoiceLedger() {
       if (paid > invoiced) return { ...styles.badgePaid, backgroundColor: '#EDE9FE', color: '#6D28D9', border: '1px solid #DDD6FE' }; 
       return { ...styles.badgePaid, backgroundColor: '#D1FAE5', color: '#047857' }; 
     }
-    if (inv.status === 'PARTIAL') return { ...styles.badgePartial, backgroundColor: '#DBEAFE', color: '#1E40AF' };
+    if (inv.status === 'PARTIALLY PAID') return { ...styles.badgePartial, backgroundColor: '#DBEAFE', color: '#1E40AF' };
     if (inv.status === 'VOID') return { ...styles.badgeUnpaid, backgroundColor: '#F3F4F6', color: '#4B5563' };
     return { ...styles.badgeUnpaid, backgroundColor: '#FEF3C7', color: '#D97706' };
   };
 
+  // Fixed: Updated inner text rendering check from 'PARTIAL' to 'PARTIALLY PAID'
   const getBadgeText = (inv) => {
     const invoiced = parseFloat(inv.amount_invoiced || 0);
     const paid = parseFloat(inv.amount_paid || 0);
-    if (inv.status === 'PARTIAL') return `PARTIAL ($${(invoiced - paid).toFixed(2)} DUE)`;
+    if (inv.status === 'PARTIALLY PAID') return `PARTIALLY PAID ($${(invoiced - paid).toFixed(2)} DUE)`;
     if (inv.status === 'PAID' && paid > invoiced) return `OVERPAID (+$${(paid - invoiced).toFixed(2)})`;
     return inv.status || 'UNPAID';
   };
@@ -515,7 +520,8 @@ export default function InvoiceLedger() {
 
                 {drawerInvoice.status !== 'VOID' && (
                   <>
-                    {(drawerInvoice.status === 'PARTIAL' || drawerInvoice.status === 'UNPAID') && (
+                    {/* Fixed: Updated check from 'PARTIAL' to 'PARTIALLY PAID' */}
+                    {(drawerInvoice.status === 'PARTIALLY PAID' || drawerInvoice.status === 'UNPAID') && (
                        <button onClick={() => handleActionClick('REMIND', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#F59E0B'}}>🔔 Send Balance Reminder</button>
                     )}
                     <button onClick={() => handleActionClick('PAY', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: drawerInvoice.status === 'PAID' ? '#8B5CF6' : '#10B981'}}>
