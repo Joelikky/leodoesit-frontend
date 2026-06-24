@@ -154,7 +154,21 @@ export default function InvoiceLedger() {
         let id = targets[i];
         let res; 
         if (action === 'EMAIL') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/send`, 'POST');        
-        if (action === 'PAY') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/pay`, 'PUT', { payment_amount: paymentAmount ? parseFloat(paymentAmount) : null });
+        if (action === 'PAY') {
+          // If no specific value is provided, compute the remainder target for execution
+          let payloadAmount = paymentAmount ? parseFloat(paymentAmount) : null;
+          if (!payloadAmount) {
+            const currentInvoiceObj = safeInvoices.find(inv => inv.id === id);
+            if (currentInvoiceObj) {
+              payloadAmount = parseFloat(currentInvoiceObj.amount_invoiced || 0) - parseFloat(currentInvoiceObj.amount_paid || 0);
+            }
+          }
+          res = await runApiAction(
+            `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/pay`, 
+            'PUT', 
+            { amountPaidEntered: payloadAmount }
+          );
+        }
         if (action === 'VOID') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/void`, 'PUT');
         if (action === 'REMIND') res = await runApiAction(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/invoices/${id}/remind`, 'POST');
         
@@ -476,7 +490,7 @@ export default function InvoiceLedger() {
                     const isOver = bal < 0;
                     return (
                       <>
-                        <span style={{ Sign: '12px', color: '#6B7280' }}>{isOver ? 'Credit Issued' : 'Balance Due'}</span>
+                        <span style={{ fontSize: '12px', color: '#6B7280' }}>{isOver ? 'Credit Issued' : 'Balance Due'}</span>
                         <div style={{ fontWeight: 'bold', color: isOver ? '#7C3AED' : '#DC2626' }}>
                           {isOver ? '+' : ''}${Math.abs(bal).toFixed(2)}
                         </div>
@@ -501,7 +515,7 @@ export default function InvoiceLedger() {
 
                 {drawerInvoice.status !== 'VOID' && (
                   <>
-                    {drawerInvoice.status === 'PARTIAL' && (
+                    {(drawerInvoice.status === 'PARTIAL' || drawerInvoice.status === 'UNPAID') && (
                        <button onClick={() => handleActionClick('REMIND', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: '#F59E0B'}}>🔔 Send Balance Reminder</button>
                     )}
                     <button onClick={() => handleActionClick('PAY', drawerInvoice.id, false)} style={{...styles.submitBtn, backgroundColor: drawerInvoice.status === 'PAID' ? '#8B5CF6' : '#10B981'}}>
@@ -551,7 +565,7 @@ const styles = {
   pageInfo: { color: '#6B7280', fontSize: '13px' },
   modalOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000 },
   modalBox: { backgroundColor: 'white', padding: '30px', borderRadius: '16px', width: '400px' },
-  modalInput: { width: '100%', padding: '10px', marginTop: '10px', borderRadius: '8px', border: '1px solid #D1D5DB' },
+  modalInput: { width: '100%', padding: '10px', marginTop: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', boxSizing: 'border-box' },
   submitBtn: { color: 'white', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' },
   cancelBtn: { backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #D1D5DB', padding: '12px', borderRadius: '8px', cursor: 'pointer', flex: 1 },
   drawerOverlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(17, 24, 39, 0.5)', zIndex: 999, display: 'flex', justifyContent: 'flex-end', backdropFilter: 'blur(2px)' },
